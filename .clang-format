@@ -1,0 +1,118 @@
+DisableFormat: false
+
+# This config file is intended for clang 10
+
+
+# Language
+Language: Cpp
+Standard: c++20
+
+# General
+ColumnLimit: 80
+UseCRLF: false
+UseTab: Never
+
+# Indent
+AccessModifierOffset: 0
+IndentCaseLabels: false
+IndentGotoLabels: false
+IndentPPDirectives: None
+IndentWidth: 4
+IndentWrappedFunctionNames: true
+TabWidth: 4
+ConstructorInitializerIndentWidth: 2
+ContinuationIndentWidth: 2
+NamespaceIndentation: None
+
+# Include and using
+IncludeBlocks: Regroup
+IncludeCategories: 
+    - Regex:        '"([A-Za-z0-9.\/_])+"'
+      Priority:     1
+    - Regex:        '<([A-Za-z0-9\/_])+>'
+      Priority:     2
+    - Regex:        '<([A-Za-z0-9.\/])+>'
+      Priority:     3
+IncludeIsMainRegex: "$"
+IncludeIsMainSourceRegex: ""
+SortIncludes: true
+SortUsingDeclarations: true
+
+# Penalties
+# nothing will be more than ColumnLimit + 10
+PenaltyBreakAssignment: 0
+PenaltyBreakBeforeFirstCallParameter: 10
+PenaltyBreakComment: 0
+PenaltyBreakFirstLessLess: 0
+PenaltyBreakString: 5
+PenaltyBreakTemplateDeclaration: 0
+PenaltyExcessCharacter: 1
+PenaltyReturnTypeOnItsOwnLine: 10
+
+# Spaces
+Cpp11BracedListStyle: true
+PointerAlignment: Right
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: true
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 2
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# Short on single line
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Inline
+AllowShortLoopsOnASingleLine: false
+
+# Align
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: true
+AlignEscapedNewlines: Left
+AlignOperands: true
+AlignTrailingComments: true
+
+# Break or pack
+AllowAllArgumentsOnNextLine: true
+AllowAllConstructorInitializersOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: true
+BinPackParameters: true
+BreakBeforeBinaryOperators: All
+BreakBeforeBraces: Attach
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: AfterColon
+BreakInheritanceList: AfterColon
+BreakStringLiterals: true
+CompactNamespaces: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+ReflowComments: true
+
+# Derive
+DeriveLineEnding: false
+DerivePointerAlignment: false
+
+# Misc
+FixNamespaceComments: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 2
