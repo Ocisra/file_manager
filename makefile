@@ -1,5 +1,6 @@
-FLAGS = -lncurses -lstdc++ -std=c++17 -g
+FLAGS = -lncurses -std=c++20 -g
 SRC = $(wildcard *.cpp)
+CC = clang++
 
 main: $(SRC)
-	clang $^ -o $@ $(FLAGS)
+	$(CC) $^ -o $@ $(FLAGS)

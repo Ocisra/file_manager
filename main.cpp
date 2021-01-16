@@ -1,4 +1,5 @@
 #include "miller.hpp"
+#include "navigation.hpp"
 
 #include <csignal>
 #include <cstdlib>
@@ -51,7 +52,6 @@ int main() {
     signal(SIGWINCH, signal_handler);
 
     miller->init();
-
 
     int c;
 

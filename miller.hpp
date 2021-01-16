@@ -4,6 +4,11 @@
 #include <string>
 
 #include <ncurses.h>
+#include "navigation.hpp"
+
+// scroll is a ncurses macro so I cannot name a function scroll without
+// undefining it
+#undef scroll
 
 enum Colors {
     /* 0 is reserved for default */
@@ -21,6 +26,7 @@ class Miller {
     void redraw();
     void resize();
     void move(Direction direction);
+    void scroll(WINDOW *win, Direction direction);
     void noWrapOutput(WINDOW *win, std::string output);
     inline WINDOW *left() { return panelLeft; }
     inline WINDOW *middle() { return panelMiddle; }
@@ -33,12 +39,20 @@ class Miller {
         attr_line(win, A_NORMAL, colorPair);
     }
     inline unsigned int getCursorLine() { return cursorLine; }
+    inline unsigned int getMaxVisibleLines() { return maxVisibleLines; }
+    inline std::pair<unsigned int, unsigned int> getCurrentVisibleLines() {
+        return currentVisibleLines;
+    }
+    inline Path *getPath() { return this->path; }
 
     private:
+    std::pair<unsigned int, unsigned int> currentVisibleLines;
     unsigned int cursorLine;
+    unsigned int maxVisibleLines;
     WINDOW *panelLeft;
     WINDOW *panelMiddle;
     WINDOW *panelRight;
+    Path *path;
 };
 
 extern Miller *miller;
