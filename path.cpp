@@ -36,33 +36,13 @@ void Path::goUp() {}
 
 void Path::goDown() {}
 
-void Path::display(WINDOW *win, Content *toDisplay,
-                   std::pair<unsigned int, unsigned int> range, int x, int y) {
-    unsigned int lineCounter = 0;
-    if (toDisplay->dirs.size() + lineCounter >= range.first) {
-        lineCounter = range.first;
-        auto p = toDisplay->dirs.begin();
-        for (std::advance(p, lineCounter); p != toDisplay->dirs.end(); p++) {
-            miller->noWrapOutput(win, p->filename().string() + "\n", x, y);
-            lineCounter++;
-            if (lineCounter >= range.second)
-                return;
-        }
-    } else
-        lineCounter += toDisplay->dirs.size();
+void Path::display(Window *win, Content *toDisplay) {
+    for (auto p = toDisplay->dirs.begin(); p != toDisplay->dirs.end(); p++) {
+        miller->noWrapOutput(win, p->filename().string() + "\n");
+    }
 
-    if (toDisplay->files.size() + lineCounter >= range.first) {
-        auto p = toDisplay->files.begin();
-        if (range.first > lineCounter) {
-            std::advance(p, range.first - lineCounter);
-            lineCounter = range.first;
-        }
-        for (/* init at previous lines */; p != toDisplay->files.end(); p++) {
-            miller->noWrapOutput(win, p->filename().string() + "\n", x, y);
-            lineCounter++;
-            if (lineCounter >= range.second)
-                return;
-        }
+    for (auto p = toDisplay->files.begin(); p != toDisplay->files.end(); p++) {
+        miller->noWrapOutput(win, p->filename().string() + "\n");
     }
 }
 

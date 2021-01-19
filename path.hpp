@@ -15,14 +15,15 @@ struct Content {
     std::set<fs::path> files;
 };
 
+struct Window; // in miller.hpp
+
 class Path {
     public:
     Path();
     ~Path();
     void goUp();
     void goDown();
-    void display(WINDOW *win, Content *toDisplay,
-                 std::pair<unsigned int, unsigned int> range, int x = -1, int y = -1);
+    void display(Window *win, Content *toDisplay);
     fs::path getFileByLine(unsigned int line);
     fs::path getPath();
     inline Content *getParent() { return parent; }

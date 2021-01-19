@@ -24,6 +24,14 @@ enum Colors {
 
 enum Direction { LEFT, RIGHT, UP, DOWN };
 
+struct Window {
+    WINDOW *win;
+    int sizex, sizey;    // size of the pad
+    int startx, starty;  // first character of the pad displayed
+    int posx, posy;      // position on the screen of the first character
+    int vsizex, vsizey;  // size of the visible region of the pad
+};
+
 class Miller {
     public:
     Miller();
@@ -32,16 +40,17 @@ class Miller {
     void redraw();
     void resize();
     void move(Direction direction);
-    void scroll(WINDOW *win, Direction direction);
-    void noWrapOutput(WINDOW *win, std::string output, int x = -1, int y = -1);
-    inline WINDOW *left() { return panelLeft; }
-    inline WINDOW *middle() { return panelMiddle; }
-    inline WINDOW *right() { return panelRight; }
-    inline void attr_line(WINDOW *win, attr_t attr, short colorPair) {
-        wchgat(win, -1, attr, colorPair, NULL);
-        wrefresh(win);
+    void scroll(Window *win, Direction direction);
+    void noWrapOutput(Window *win, std::string output);
+    inline Window *left() { return panelLeft; }
+    inline Window *middle() { return panelMiddle; }
+    inline Window *right() { return panelRight; }
+    inline void attr_line(Window *win, attr_t attr, short colorPair) {
+        wchgat(win->win, -1, attr, colorPair, NULL);
+        prefresh(win->win, win->starty, win->startx, win->posy, win->posx,
+                 win->vsizey, win->vsizex);
     }
-    inline void attr_line(WINDOW *win, short colorPair) {
+    inline void attr_line(Window *win, short colorPair) {
         attr_line(win, A_NORMAL, colorPair);
     }
     inline bool isAtTopOfWindow() {
@@ -71,9 +80,9 @@ class Miller {
     std::pair<unsigned int, unsigned int> currentVisibleLines;
     unsigned int cursorLine;
     unsigned int maxVisibleLines;
-    WINDOW *panelLeft;
-    WINDOW *panelMiddle;
-    WINDOW *panelRight;
+    Window *panelLeft;
+    Window *panelMiddle;
+    Window *panelRight;
     Path *path;
 };
 

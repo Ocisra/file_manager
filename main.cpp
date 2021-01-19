@@ -60,7 +60,7 @@ int main() {
 
 
     while (true) {
-        c = wgetch(miller->left());
+        c = wgetch(miller->middle()->win);
 
         switch (c) {
         case 'q': quit();

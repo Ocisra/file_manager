@@ -11,72 +11,91 @@ const std::map<std::string, std::string> locations {
 
 Miller::Miller() {
     int maxx = getmaxx(stdscr);
+    int maxy = getmaxy(stdscr);
 
-    panelLeft   = newpad(MAX_LINES, maxx / 8);
-    panelMiddle = newpad(MAX_LINES, 3 * maxx / 8);
-    panelRight  = newpad(MAX_LINES, maxx / 2);
+    panelLeft   = new Window;
+    panelMiddle = new Window;
+    panelRight  = new Window;
 
-    setMaxVisibleLines(getmaxy(stdscr));
+    auto setWindow = [](Window *win, int sizex, int sizey, int startx,
+                        int starty, int posx, int posy, int vsizex, int vsizey) {
+        win->win    = newpad(sizey, sizex);
+        win->startx = startx;
+        win->starty = starty;
+        win->posx   = posx;
+        win->posy   = posy;
+        win->vsizex = vsizex;
+        win->vsizey = vsizey;
+    };
+
+    setWindow(left(), maxx / 8, MAX_LINES, 0, 0, 0, 0, maxx / 8 - 1, maxy - 1);
+    setWindow(middle(), 3 * maxx / 8, MAX_LINES, 0, 0, maxx / 8, 0,
+              3 * maxx / 8 - 1, maxy - 1);
+    setWindow(right(), maxx / 2, MAX_LINES, 0, 0, maxx / 2, 0, maxx / 2, maxy - 1);
+
+    setMaxVisibleLines(maxy);
     setCurrentVisibleLines(std::make_pair(0, getMaxVisibleLines() - 1));
+
 
     path = new Path;
 
-    scrollok(middle(), TRUE);
-    scrollok(left(), TRUE);
+    scrollok(middle()->win, TRUE);
+    scrollok(left()->win, TRUE);
 
     draw();
 }
 
 Miller::~Miller() {
-    delwin(left());
-    delwin(middle());
-    delwin(right());
+    delwin(left()->win);
+    delwin(middle()->win);
+    delwin(right()->win);
+
+    delete left();
+    delete middle();
+    delete right();
 
     delete getPath();
 }
 
-void Miller::noWrapOutput(WINDOW *win, std::string output, int x, int y) {
-    if (x == -1)
-        x = getcurx(win);
-    if (y == -1)
-        y = getcury(win);
-    int maxx = getmaxx(win);
-    if (output.length() > maxx) {
+void Miller::noWrapOutput(Window *win, std::string output) {
+    int maxx = getmaxx(win->win);
+    if (output.length() > (unsigned long)maxx) {
         output = output.substr(0, maxx);
     }
-    mvwprintw(win, y, x, output.c_str());
-    prefresh(win, 0, 0, 10, 0, 20, 20);
+    wprintw(win->win, output.c_str());
+    prefresh(win->win, win->sizey, win->sizex, win->posy, win->posx,
+             win->vsizey, win->vsizex);
 }
 
 void Miller::draw() {
-    box(left(), 0, 0);
-    box(middle(), 0, 0);
-    box(right(), 0, 0);
+    box(left()->win, 0, 0);
+    box(middle()->win, 0, 0);
+    box(right()->win, 0, 0);
 
-    getPath()->display(left(), getPath()->getParent(), {0, getMaxVisibleLines() - 1});
-    getPath()->display(middle(), getPath()->getCurrent(), {0, getMaxVisibleLines() - 1});
+    getPath()->display(left(), getPath()->getParent());
+    getPath()->display(middle(), getPath()->getCurrent());
 
-    wrefresh(left());
-    wrefresh(middle());
-    wrefresh(right());
-    wmove(middle(), 0, 0);
+    prefresh(left()->win, left()->starty, left()->startx, left()->posy,
+             left()->posx, left()->vsizey, left()->vsizex);
+    prefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy,
+             middle()->posx, middle()->vsizey, middle()->vsizex);
+    prefresh(right()->win, right()->starty, right()->startx, right()->posy,
+             right()->posx, right()->vsizey, right()->vsizex);
+
+    wmove(middle()->win, 0, 0);
     attr_line(middle(), SELECTED);
 }
 
 void Miller::redraw() {
-    box(left(), 0, 0);
-    box(middle(), 0, 0);
-    box(right(), 0, 0);
-    getPath()->display(left(), getPath()->getParent(), {0, getMaxVisibleLines()});
-    getPath()->display(middle(), getPath()->getCurrent(), {0, getMaxVisibleLines()});
+    box(left()->win, 0, 0);
+    box(middle()->win, 0, 0);
+    box(right()->win, 0, 0);
+    getPath()->display(left(), getPath()->getParent());
+    getPath()->display(middle(), getPath()->getCurrent());
 }
 
 void Miller::resize() {
-    endwin();
     refresh();
-    wclear(right());
-    wclear(middle());
-    wclear(left());
 
     int maxx, maxy;
     getmaxyx(stdscr, maxy, maxx);
@@ -85,16 +104,28 @@ void Miller::resize() {
     setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first,
                                           getCurrentVisibleLines().first + maxy));
 
-    wresize(left(), MAX_LINES, maxx / 8);
-    mvwin(left(), 0, 0);
-    wresize(middle(), MAX_LINES, 3 * maxx / 8);
-    mvwin(middle(), 0, maxx / 8);
-    wresize(right(), MAX_LINES, maxx / 2);
-    mvwin(right(), 0, maxx / 2);
+    auto setWindow = [](Window *win, int sizex, int sizey, int startx,
+                        int starty, int posx, int posy, int vsizex, int vsizey) {
+        win->win    = newpad(sizey, sizex);
+        win->startx = startx;
+        win->starty = starty;
+        win->posx   = posx;
+        win->posy   = posy;
+        win->vsizex = vsizex;
+        win->vsizey = vsizey;
+    };
 
-    wrefresh(left());
-    wrefresh(middle());
-    wrefresh(right());
+    setWindow(left(), maxx / 8, MAX_LINES, 0, 0, 0, 0, maxx / 8 - 1, maxy - 1);
+    setWindow(middle(), 3 * maxx / 8, MAX_LINES, 0, 0, maxx / 8, 0,
+              3 * maxx / 8 - 1, maxy - 1);
+    setWindow(right(), maxx / 2, MAX_LINES, 0, 0, maxx / 2, 0, maxx / 2, maxy - 1);
+
+    prefresh(left()->win, left()->starty, left()->startx, left()->posy,
+             left()->posx, left()->vsizey, left()->vsizex);
+    prefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy,
+             middle()->posx, middle()->vsizey, middle()->vsizex);
+    prefresh(right()->win, right()->starty, right()->startx, right()->posy,
+             right()->posx, right()->vsizey, right()->vsizex);
 
     draw();
 }
@@ -112,7 +143,7 @@ void Miller::move(Direction direction) {
         } else {
             // isAtBottomOfWindow() uses it so must change after
             setCursorLine(getCursorLine() - 1);
-            wmove(middle(), getCursorLine() - getCurrentVisibleLines().first, 0);
+            wmove(middle()->win, getCursorLine() - getCurrentVisibleLines().first, 0);
         }
         attr_line(middle(), SELECTED);
         break;
@@ -127,7 +158,7 @@ void Miller::move(Direction direction) {
         } else {
             // isAtBottomOfWindow() uses it so must change after
             setCursorLine(getCursorLine() + 1);
-            wmove(middle(), getCursorLine() - getCurrentVisibleLines().first, 0);
+            wmove(middle()->win, getCursorLine() - getCurrentVisibleLines().first, 0);
         }
         attr_line(middle(), SELECTED);
         break;
@@ -136,30 +167,23 @@ void Miller::move(Direction direction) {
     }
 }
 
-void Miller::scroll(WINDOW *win, Direction direction) {
+void Miller::scroll(Window *win, Direction direction) {
     switch (direction) {
     case UP: {
-        wscrl(win, -1);
         setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first - 1,
                                               getCurrentVisibleLines().second - 1));
-        getPath()->display(
-          middle(), getPath()->getCurrent(),
-          {getCurrentVisibleLines().first, getCurrentVisibleLines().first}, 0, 0);
+        win->starty--;
         break;
     }
     case DOWN:
         setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first + 1,
                                               getCurrentVisibleLines().second + 1));
-        wscrl(win, 1);
-        getPath()->display(middle(), getPath()->getCurrent(),
-                           {getCurrentVisibleLines().second - 1,
-                            getCurrentVisibleLines().second - 1},
-                           0, getcury(win) + SCROLLOFF);
-        wmove(win, getcury(win) - SCROLLOFF - 1, 0);
+        win->starty++;
         break;
     default:;
     }
-    wrefresh(win);
+    prefresh(win->win, win->starty, win->startx, win->posy, win->posx,
+             win->vsizey, win->vsizex);
 }
 
 Miller *miller;
