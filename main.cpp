@@ -1,5 +1,5 @@
 #include "miller.hpp"
-#include "navigation.hpp"
+#include "path.hpp"
 
 #include <csignal>
 #include <cstdlib>
@@ -16,6 +16,7 @@
 
 
 int quit() {
+    delete miller;
     endwin();
     exit(0);
 }
@@ -44,14 +45,15 @@ int main() {
     initscr();
     start_color();
     cbreak();
-    keypad(miller->left(), TRUE);
     noecho();
     curs_set(0);
     init_colors();
 
     signal(SIGWINCH, signal_handler);
+    
+    miller = new Miller;
 
-    miller->init();
+    keypad(stdscr, TRUE);
 
     int c;
 

@@ -1,6 +1,6 @@
 #include "miller.hpp"
 
-#include "navigation.hpp"
+#include "path.hpp"
 
 #include <cstdint>
 #include <map>
@@ -9,18 +9,17 @@
 const std::map<std::string, std::string> locations {
   {"1", "~/.config/sway/config"}, {"2", "~/.config/nvim/init.vim"}};
 
-void Miller::init() {
+Miller::Miller() {
     int maxx = getmaxx(stdscr);
-    int maxy = MAX_LINES;
 
-    panelLeft   = newwin(maxy, maxx / 8, 0, 0);
-    panelMiddle = newwin(maxy, 3 * maxx / 8, 0, maxx / 8);
-    panelRight  = newwin(maxy, maxx / 2, 0, maxx / 2);
+    panelLeft   = newpad(MAX_LINES, maxx / 8);
+    panelMiddle = newpad(MAX_LINES, 3 * maxx / 8);
+    panelRight  = newpad(MAX_LINES, maxx / 2);
 
-    maxVisibleLines     = getmaxy(stdscr);
-    currentVisibleLines = std::make_pair(0, maxVisibleLines - 1);
-    path                = new Path;
-    path->init();
+    setMaxVisibleLines(getmaxy(stdscr));
+    setCurrentVisibleLines(std::make_pair(0, getMaxVisibleLines() - 1));
+
+    path = new Path;
 
     scrollok(middle(), TRUE);
     scrollok(left(), TRUE);
@@ -28,12 +27,25 @@ void Miller::init() {
     draw();
 }
 
-void Miller::noWrapOutput(WINDOW *window, std::string output) {
-    int maxx = getmaxx(window);
+Miller::~Miller() {
+    delwin(left());
+    delwin(middle());
+    delwin(right());
+
+    delete getPath();
+}
+
+void Miller::noWrapOutput(WINDOW *win, std::string output, int x, int y) {
+    if (x == -1)
+        x = getcurx(win);
+    if (y == -1)
+        y = getcury(win);
+    int maxx = getmaxx(win);
     if (output.length() > maxx) {
         output = output.substr(0, maxx);
     }
-    wprintw(window, output.c_str());
+    mvwprintw(win, y, x, output.c_str());
+    prefresh(win, 0, 0, 10, 0, 20, 20);
 }
 
 void Miller::draw() {
@@ -41,8 +53,8 @@ void Miller::draw() {
     box(middle(), 0, 0);
     box(right(), 0, 0);
 
-    getPath()->display(left(), getPath()->getParent());
-    getPath()->display(middle(), getPath()->getCurrent());
+    getPath()->display(left(), getPath()->getParent(), {0, getMaxVisibleLines() - 1});
+    getPath()->display(middle(), getPath()->getCurrent(), {0, getMaxVisibleLines() - 1});
 
     wrefresh(left());
     wrefresh(middle());
@@ -55,8 +67,8 @@ void Miller::redraw() {
     box(left(), 0, 0);
     box(middle(), 0, 0);
     box(right(), 0, 0);
-    getPath()->display(left(), getPath()->getParent());
-    getPath()->display(middle(), getPath()->getCurrent());
+    getPath()->display(left(), getPath()->getParent(), {0, getMaxVisibleLines()});
+    getPath()->display(middle(), getPath()->getCurrent(), {0, getMaxVisibleLines()});
 }
 
 void Miller::resize() {
@@ -69,8 +81,9 @@ void Miller::resize() {
     int maxx, maxy;
     getmaxyx(stdscr, maxy, maxx);
 
-    maxVisibleLines            = maxy;
-    currentVisibleLines.second = currentVisibleLines.first + maxy;
+    setMaxVisibleLines(maxy);
+    setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first,
+                                          getCurrentVisibleLines().first + maxy));
 
     wresize(left(), MAX_LINES, maxx / 8);
     mvwin(left(), 0, 0);
@@ -89,25 +102,33 @@ void Miller::resize() {
 void Miller::move(Direction direction) {
     switch (direction) {
     case UP:
-        if (getCursorLine() == 0)
+        if (isAtTopOfEntries())
             break;
         attr_line(middle(), 0);
-        cursorLine--;
-        if (getCursorLine() == getCurrentVisibleLines().first)
+        if (isAtTopOfWindow()) {
+            // isAtBottomOfWindow() uses it so must change after
+            setCursorLine(getCursorLine() - 1);
             scroll(middle(), UP);
-        else
-            wmove(middle(), getCursorLine(), 0);
+        } else {
+            // isAtBottomOfWindow() uses it so must change after
+            setCursorLine(getCursorLine() - 1);
+            wmove(middle(), getCursorLine() - getCurrentVisibleLines().first, 0);
+        }
         attr_line(middle(), SELECTED);
         break;
     case DOWN:
-        if (getCursorLine() == getPath()->getNumOfEntry(getPath()->getCurrent()) - 1)
+        if (isAtBottomOfEntries())
             break;
         attr_line(middle(), 0);
-        cursorLine++;
-        if (getCursorLine() == getCurrentVisibleLines().second)
+        if (isAtBottomOfWindow()) {
+            // isAtBottomOfWindow() uses it so must change after
+            setCursorLine(getCursorLine() + 1);
             scroll(middle(), DOWN);
-        else
-            wmove(middle(), getCursorLine(), 0);
+        } else {
+            // isAtBottomOfWindow() uses it so must change after
+            setCursorLine(getCursorLine() + 1);
+            wmove(middle(), getCursorLine() - getCurrentVisibleLines().first, 0);
+        }
         attr_line(middle(), SELECTED);
         break;
     case LEFT: getPath()->goUp(); break;
@@ -117,19 +138,28 @@ void Miller::move(Direction direction) {
 
 void Miller::scroll(WINDOW *win, Direction direction) {
     switch (direction) {
-    case UP:
+    case UP: {
         wscrl(win, -1);
-        currentVisibleLines.first--;
-        currentVisibleLines.second--;
+        setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first - 1,
+                                              getCurrentVisibleLines().second - 1));
+        getPath()->display(
+          middle(), getPath()->getCurrent(),
+          {getCurrentVisibleLines().first, getCurrentVisibleLines().first}, 0, 0);
         break;
+    }
     case DOWN:
-        currentVisibleLines.first++;
-        currentVisibleLines.second++;
+        setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first + 1,
+                                              getCurrentVisibleLines().second + 1));
         wscrl(win, 1);
+        getPath()->display(middle(), getPath()->getCurrent(),
+                           {getCurrentVisibleLines().second - 1,
+                            getCurrentVisibleLines().second - 1},
+                           0, getcury(win) + SCROLLOFF);
+        wmove(win, getcury(win) - SCROLLOFF - 1, 0);
         break;
     default:;
     }
     wrefresh(win);
 }
 
-Miller *miller = new Miller;
+Miller *miller;

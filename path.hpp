@@ -1,5 +1,5 @@
-#ifndef NAVIGATION_HPP
-#define NAVIGATION_HPP
+#ifndef PATH_HPP
+#define PATH_HPP
 
 #include <filesystem>
 #include <set>
@@ -17,15 +17,20 @@ struct Content {
 
 class Path {
     public:
-    void init();
+    Path();
+    ~Path();
     void goUp();
     void goDown();
-    void display(WINDOW *win, Content *toDisplay);
+    void display(WINDOW *win, Content *toDisplay,
+                 std::pair<unsigned int, unsigned int> range, int x = -1, int y = -1);
     fs::path getFileByLine(unsigned int line);
     fs::path getPath();
     inline Content *getParent() { return parent; }
     inline Content *getCurrent() { return current; }
     inline Content *getChild() { return child; }
+    inline void setParent(Content *c) { parent = c; }
+    inline void setCurrent(Content *c) { current = c; }
+    inline void setChild(Content *c) { child = c; }
     template <typename T>
     T getNthElement(std::set<T> &s, int n);
     inline unsigned int getNumOfEntry(Content *content) {
@@ -39,4 +44,4 @@ class Path {
 
 extern Path *path;
 
-#endif  // NAVIGATION_HPP
+#endif  // PATH_HPP
