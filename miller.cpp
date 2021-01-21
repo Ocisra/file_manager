@@ -1,13 +1,15 @@
 #include "miller.hpp"
 
+#include "log.hpp"
 #include "path.hpp"
 
 #include <cstdint>
 #include <map>
 #include <string>
 
-const std::map<std::string, std::string> locations {
-  {"1", "~/.config/sway/config"}, {"2", "~/.config/nvim/init.vim"}};
+#if LOG_LEVEL
+Logger *log;
+#endif
 
 Miller::Miller() {
     int maxx = getmaxx(stdscr);
@@ -43,6 +45,16 @@ Miller::Miller() {
     scrollok(left()->win, TRUE);
 
     draw();
+
+#if LOG_LEVEL
+    log = new Logger("/tmp/file_manager.log");
+#endif
+
+#if LOG_LEVEL >= DEBUG
+    log->debug(left(), "Init left");
+    log->debug(middle(), " Init middle");
+    log->debug(right(), "Init right");
+#endif
 }
 
 Miller::~Miller() {
@@ -101,8 +113,8 @@ void Miller::resize() {
     getmaxyx(stdscr, maxy, maxx);
 
     setMaxVisibleLines(maxy);
-    setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first,
-                                          getCurrentVisibleLines().first + maxy));
+    // setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first,
+    // getCurrentVisibleLines().first + maxy));
 
     auto setWindow = [](Window *win, int sizex, int sizey, int startx,
                         int starty, int posx, int posy, int vsizex, int vsizey) {
@@ -133,17 +145,21 @@ void Miller::resize() {
 void Miller::move(Direction direction) {
     switch (direction) {
     case UP:
-        if (isAtTopOfEntries())
+        if (isAtTopOfEntries()) {
             break;
+        }
         attr_line(middle(), 0);
-        if (isAtTopOfWindow()) {
-            // isAtBottomOfWindow() uses it so must change after
+        if (isAtTopOfWindow() && getCursorLine() > SCROLLOFF) {
+            // isAtTopOfWindow() uses it so must change after
             setCursorLine(getCursorLine() - 1);
             scroll(middle(), UP);
+            wmove(middle()->win,
+                  getCursorLine() /* - getCurrentVisibleLines().first*/, 0);
         } else {
-            // isAtBottomOfWindow() uses it so must change after
+            // isAtTopOfWindow() uses it so must change after
             setCursorLine(getCursorLine() - 1);
-            wmove(middle()->win, getCursorLine() - getCurrentVisibleLines().first, 0);
+            wmove(middle()->win,
+                  getCursorLine() /* - getCurrentVisibleLines().first*/, 0);
         }
         attr_line(middle(), SELECTED);
         break;
@@ -151,39 +167,50 @@ void Miller::move(Direction direction) {
         if (isAtBottomOfEntries())
             break;
         attr_line(middle(), 0);
-        if (isAtBottomOfWindow()) {
+        if (isAtBottomOfWindow()
+            && getCursorLine() + SCROLLOFF
+                 < getPath()->getNumOfEntry(getPath()->getCurrent()) - 1) {
             // isAtBottomOfWindow() uses it so must change after
             setCursorLine(getCursorLine() + 1);
             scroll(middle(), DOWN);
+            wmove(middle()->win,
+                  getCursorLine() /* - getCurrentVisibleLines().first*/, 0);
         } else {
             // isAtBottomOfWindow() uses it so must change after
             setCursorLine(getCursorLine() + 1);
-            wmove(middle()->win, getCursorLine() - getCurrentVisibleLines().first, 0);
+            wmove(middle()->win,
+                  getCursorLine() /* - getCurrentVisibleLines().first*/, 0);
         }
         attr_line(middle(), SELECTED);
         break;
     case LEFT: getPath()->goUp(); break;
     case RIGHT: getPath()->goDown(); break;
     }
+#if LOG_LEVEL >= DEBUG
+    log->debug(getCursorLine(), "Cursor line");
+#endif
 }
 
 void Miller::scroll(Window *win, Direction direction) {
     switch (direction) {
     case UP: {
-        setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first - 1,
-                                              getCurrentVisibleLines().second - 1));
+        // setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first
+        // - 1, getCurrentVisibleLines().second - 1));
         win->starty--;
         break;
     }
     case DOWN:
-        setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first + 1,
-                                              getCurrentVisibleLines().second + 1));
+        // setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first
+        // + 1, getCurrentVisibleLines().second + 1));
         win->starty++;
         break;
     default:;
     }
     prefresh(win->win, win->starty, win->startx, win->posy, win->posx,
              win->vsizey, win->vsizex);
+#if LOG_LEVEL >= DEBUG
+    log->debug(win, "Scroll");
+#endif
 }
 
 Miller *miller;

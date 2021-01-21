@@ -6,7 +6,7 @@
 
 #include <ncurses.h>
 
-#define MAX_LINES 100
+#define MAX_LINES 10000
 
 namespace fs = std::filesystem;
 

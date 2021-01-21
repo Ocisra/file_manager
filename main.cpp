@@ -1,3 +1,4 @@
+
 #include "miller.hpp"
 #include "path.hpp"
 
@@ -12,9 +13,9 @@
 #include <unistd.h>
 
 
-
-
-
+/**
+ * @brief Clean exit
+ */
 int quit() {
     delete miller;
     endwin();
@@ -22,7 +23,9 @@ int quit() {
 }
 
 
-
+/**
+ * @brief Create custom colors and pairs
+ */
 void init_colors() {
     init_color(SELECTED_BG, 200, 200, 200);
     init_color(SELECTED_FG, 1000, 1000, 1000);
@@ -31,9 +34,9 @@ void init_colors() {
 
 
 /**
- * @brief
+ * @brief Handle signals sent to the program
  *
- * @return
+ * @param signum: signal number
  */
 void signal_handler(int signum) {
     switch (signum) {
@@ -50,13 +53,12 @@ int main() {
     init_colors();
 
     signal(SIGWINCH, signal_handler);
-    
+
     miller = new Miller;
 
     keypad(stdscr, TRUE);
 
     int c;
-
 
 
     while (true) {

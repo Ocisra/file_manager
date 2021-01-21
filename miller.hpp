@@ -26,10 +26,10 @@ enum Direction { LEFT, RIGHT, UP, DOWN };
 
 struct Window {
     WINDOW *win;
-    int sizex, sizey;    // size of the pad
-    int startx, starty;  // first character of the pad displayed
-    int posx, posy;      // position on the screen of the first character
-    int vsizex, vsizey;  // size of the visible region of the pad
+    unsigned int sizex, sizey;    // size of the pad
+    unsigned int startx, starty;  // first character of the pad displayed
+    unsigned int posx, posy;      // position on the screen of the first character
+    unsigned int vsizex, vsizey;  // size of the visible region of the pad
 };
 
 class Miller {
@@ -54,10 +54,10 @@ class Miller {
         attr_line(win, A_NORMAL, colorPair);
     }
     inline bool isAtTopOfWindow() {
-        return getCursorLine() == getCurrentVisibleLines().first + SCROLLOFF;
+        return getCursorLine() == middle()->starty + SCROLLOFF;
     }
     inline bool isAtBottomOfWindow() {
-        return getCursorLine() == getCurrentVisibleLines().second - SCROLLOFF;
+        return getCursorLine() == middle()->vsizey + middle()->starty - SCROLLOFF;
     }
     inline bool isAtTopOfEntries() { return getCursorLine() == 0; }
     inline bool isAtBottomOfEntries() {
