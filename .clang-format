@@ -8,7 +8,7 @@ Language: Cpp
 Standard: c++20
 
 # General
-ColumnLimit: 80
+ColumnLimit: 90
 UseCRLF: false
 UseTab: Never
 

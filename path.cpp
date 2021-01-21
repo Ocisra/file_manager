@@ -9,15 +9,19 @@
 
 Path::Path() {
     this->path = fs::current_path();
+
     setParent(new Content);
     setCurrent(new Content);
     setChild(new Content);
+
+    // get the content of the current directory
     for (auto &p : fs::directory_iterator(this->path)) {
         if (p.is_directory())
             getCurrent()->dirs.emplace(p.path());
         else
             getCurrent()->files.emplace(p.path());
     }
+    // get the content of the parent directory
     for (auto &p : fs::directory_iterator(this->path.parent_path())) {
         if (p.is_directory())
             getParent()->dirs.emplace(p.path());
@@ -36,16 +40,26 @@ void Path::goUp() {}
 
 void Path::goDown() {}
 
-void Path::display(Window *win, Content *toDisplay) {
-    for (auto p = toDisplay->dirs.begin(); p != toDisplay->dirs.end(); p++) {
+/**
+ * Display the content of a directory in a window
+ *
+ * @param win: window in which to display
+ * @param content: content to display
+ */
+void Path::display(Window *win, Content *content) {
+    // print directories before
+    for (auto p = content->dirs.begin(); p != content->dirs.end(); p++) {
         miller->noWrapOutput(win, p->filename().string() + "\n");
     }
-
-    for (auto p = toDisplay->files.begin(); p != toDisplay->files.end(); p++) {
+    // print other files after
+    for (auto p = content->files.begin(); p != content->files.end(); p++) {
         miller->noWrapOutput(win, p->filename().string() + "\n");
     }
 }
 
+/**
+ * Get the file at a specific line
+ */
 fs::path Path::getFileByLine(unsigned int line) {
     if (getCurrent()->dirs.size() > line)
         return getNthElement(current->dirs, line);
@@ -53,10 +67,12 @@ fs::path Path::getFileByLine(unsigned int line) {
         return getNthElement(current->files, line - current->dirs.size());
 }
 
-fs::path Path::getPath() {
-    return this->path;
-}
-
+/**
+ * Get the Nth element of a set
+ *
+ * @param s: set to query
+ * @param n: number of the element
+ */
 template <typename T>
 T Path::getNthElement(std::set<T> &s, int n) {
     typename std::set<T>::iterator it = s.begin();

@@ -86,7 +86,7 @@ class Logger {
     };
 
     /**
-     * Initialize the logging system
+     * @brief Initialize the logging system
      *
      * @param lf: path to the logging file
      * @param level: log level to use
@@ -98,6 +98,10 @@ class Logger {
         std::ofstream log_file;
         log_file.open(log_file_path, std::ios::trunc);
         log_file.close();
+    }
+
+    ~Logger() {
+        // Nothing to clean
     }
 
     template <typename... Ts>
@@ -133,7 +137,6 @@ class Logger {
 
     private:
     Log_Levels log_level;
-
     std::string log_file_path;
     inline void log(std::string msg) {
         std::ofstream log_file;
@@ -142,6 +145,9 @@ class Logger {
         log_file.close();
     }
 };  // namespace log
+
+/// The global logger
+extern Logger *log;
 
 
 #endif  // LOG_HPP

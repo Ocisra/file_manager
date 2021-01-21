@@ -7,11 +7,11 @@
 #include <map>
 #include <string>
 
-#if LOG_LEVEL
 Logger *log;
-#endif
+
 
 Miller::Miller() {
+    // get the size of the window
     int maxx = getmaxx(stdscr);
     int maxy = getmaxy(stdscr);
 
@@ -19,8 +19,8 @@ Miller::Miller() {
     panelMiddle = new Window;
     panelRight  = new Window;
 
-    auto setWindow = [](Window *win, int sizex, int sizey, int startx,
-                        int starty, int posx, int posy, int vsizex, int vsizey) {
+    auto setWindow = [](Window *win, int sizex, int sizey, int startx, int starty,
+                        int posx, int posy, int vsizex, int vsizey) {
         win->win    = newpad(sizey, sizex);
         win->startx = startx;
         win->starty = starty;
@@ -30,38 +30,29 @@ Miller::Miller() {
         win->vsizey = vsizey;
     };
 
+    // Create the 3 panels
     setWindow(left(), maxx / 8, MAX_LINES, 0, 0, 0, 0, maxx / 8 - 1, maxy - 1);
-    setWindow(middle(), 3 * maxx / 8, MAX_LINES, 0, 0, maxx / 8, 0,
-              3 * maxx / 8 - 1, maxy - 1);
+    setWindow(middle(), 3 * maxx / 8, MAX_LINES, 0, 0, maxx / 8, 0, 3 * maxx / 8 - 1, maxy - 1);
     setWindow(right(), maxx / 2, MAX_LINES, 0, 0, maxx / 2, 0, maxx / 2, maxy - 1);
-
-    setMaxVisibleLines(maxy);
-    setCurrentVisibleLines(std::make_pair(0, getMaxVisibleLines() - 1));
-
 
     path = new Path;
 
-    scrollok(middle()->win, TRUE);
-    scrollok(left()->win, TRUE);
+    setCursorLine(0);
 
     draw();
 
-#if LOG_LEVEL
-    log = new Logger("/tmp/file_manager.log");
-#endif
-
-#if LOG_LEVEL >= DEBUG
     log->debug(left(), "Init left");
     log->debug(middle(), " Init middle");
     log->debug(right(), "Init right");
-#endif
 }
 
 Miller::~Miller() {
+    // Delete the ncurses windows
     delwin(left()->win);
     delwin(middle()->win);
     delwin(right()->win);
 
+    // Delete the panels
     delete left();
     delete middle();
     delete right();
@@ -69,148 +60,131 @@ Miller::~Miller() {
     delete getPath();
 }
 
+/**
+ * Output to window without wrapping the output
+ *
+ * @param win: the window to which display
+ * @param output: the string to output
+ */
 void Miller::noWrapOutput(Window *win, std::string output) {
     int maxx = getmaxx(win->win);
     if (output.length() > (unsigned long)maxx) {
         output = output.substr(0, maxx);
     }
     wprintw(win->win, output.c_str());
-    prefresh(win->win, win->sizey, win->sizex, win->posy, win->posx,
-             win->vsizey, win->vsizex);
+    prefresh(win->win, win->sizey, win->sizex, win->posy, win->posx, win->vsizey, win->vsizex);
 }
 
+/**
+ * Draw the windows on the screen
+ * Responsible of positionning of the windows, initial cursor position and
+ * content of the windows
+ */
 void Miller::draw() {
-    box(left()->win, 0, 0);
-    box(middle()->win, 0, 0);
-    box(right()->win, 0, 0);
+    // useful in case the UI needs to be debugged
+    // box(left()->win, 0, 0);
+    // box(middle()->win, 0, 0);
+    // box(right()->win, 0, 0);
 
     getPath()->display(left(), getPath()->getParent());
     getPath()->display(middle(), getPath()->getCurrent());
 
-    prefresh(left()->win, left()->starty, left()->startx, left()->posy,
-             left()->posx, left()->vsizey, left()->vsizex);
+    prefresh(left()->win, left()->starty, left()->startx, left()->posy, left()->posx,
+             left()->vsizey, left()->vsizex);
     prefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy,
              middle()->posx, middle()->vsizey, middle()->vsizex);
-    prefresh(right()->win, right()->starty, right()->startx, right()->posy,
-             right()->posx, right()->vsizey, right()->vsizex);
+    prefresh(right()->win, right()->starty, right()->startx, right()->posy, right()->posx,
+             right()->vsizey, right()->vsizex);
 
     wmove(middle()->win, 0, 0);
     attr_line(middle(), SELECTED);
 }
 
-void Miller::redraw() {
-    box(left()->win, 0, 0);
-    box(middle()->win, 0, 0);
-    box(right()->win, 0, 0);
-    getPath()->display(left(), getPath()->getParent());
-    getPath()->display(middle(), getPath()->getCurrent());
-}
-
+/**
+ * Resize the application to fit the size of the terminal
+ */
 void Miller::resize() {
-    refresh();
-
     int maxx, maxy;
     getmaxyx(stdscr, maxy, maxx);
 
-    setMaxVisibleLines(maxy);
-    // setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first,
-    // getCurrentVisibleLines().first + maxy));
-
-    auto setWindow = [](Window *win, int sizex, int sizey, int startx,
-                        int starty, int posx, int posy, int vsizex, int vsizey) {
-        win->win    = newpad(sizey, sizex);
-        win->startx = startx;
-        win->starty = starty;
+    auto setWindow = [](Window *win, int posx, int posy, int vsizex, int vsizey) {
         win->posx   = posx;
         win->posy   = posy;
         win->vsizex = vsizex;
         win->vsizey = vsizey;
     };
 
-    setWindow(left(), maxx / 8, MAX_LINES, 0, 0, 0, 0, maxx / 8 - 1, maxy - 1);
-    setWindow(middle(), 3 * maxx / 8, MAX_LINES, 0, 0, maxx / 8, 0,
-              3 * maxx / 8 - 1, maxy - 1);
-    setWindow(right(), maxx / 2, MAX_LINES, 0, 0, maxx / 2, 0, maxx / 2, maxy - 1);
+    setWindow(left(), 0, 0, maxx / 8 - 1, maxy - 1);
+    setWindow(middle(), maxx / 8, 0, 3 * maxx / 8 - 1, maxy - 1);
+    setWindow(right(), maxx / 2, 0, maxx / 2, maxy - 1);
 
-    prefresh(left()->win, left()->starty, left()->startx, left()->posy,
-             left()->posx, left()->vsizey, left()->vsizex);
+    prefresh(left()->win, left()->starty, left()->startx, left()->posy, left()->posx,
+             left()->vsizey, left()->vsizex);
     prefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy,
              middle()->posx, middle()->vsizey, middle()->vsizex);
-    prefresh(right()->win, right()->starty, right()->startx, right()->posy,
-             right()->posx, right()->vsizey, right()->vsizex);
+    prefresh(right()->win, right()->starty, right()->startx, right()->posy, right()->posx,
+             right()->vsizey, right()->vsizex);
 
     draw();
 }
 
+/**
+ * Handle every movement
+ *
+ * @param direction: the direction to go
+ */
 void Miller::move(Direction direction) {
     switch (direction) {
     case UP:
-        if (isAtTopOfEntries()) {
+        if (isAtTopOfEntries())
             break;
-        }
-        attr_line(middle(), 0);
-        if (isAtTopOfWindow() && getCursorLine() > SCROLLOFF) {
-            // isAtTopOfWindow() uses it so must change after
-            setCursorLine(getCursorLine() - 1);
+
+        attr_line(middle(), 0);  // remove highlighting on 'old' line
+
+        if (isAtTopOfWindow() && getCursorLine() > SCROLLOFF)
             scroll(middle(), UP);
-            wmove(middle()->win,
-                  getCursorLine() /* - getCurrentVisibleLines().first*/, 0);
-        } else {
-            // isAtTopOfWindow() uses it so must change after
-            setCursorLine(getCursorLine() - 1);
-            wmove(middle()->win,
-                  getCursorLine() /* - getCurrentVisibleLines().first*/, 0);
-        }
-        attr_line(middle(), SELECTED);
+
+        setCursorLine(getCursorLine() - 1);
+        wmove(middle()->win, getCursorLine(), 0);
+        attr_line(middle(), SELECTED);  // add highlighting on 'new' line
         break;
     case DOWN:
         if (isAtBottomOfEntries())
             break;
-        attr_line(middle(), 0);
+
+        attr_line(middle(), 0);  // remove highlighting on 'old' line
+
         if (isAtBottomOfWindow()
-            && getCursorLine() + SCROLLOFF
-                 < getPath()->getNumOfEntry(getPath()->getCurrent()) - 1) {
-            // isAtBottomOfWindow() uses it so must change after
-            setCursorLine(getCursorLine() + 1);
+            && getCursorLine() + SCROLLOFF < getPath()->getNumOfEntry(getPath()->getCurrent()) - 1)
             scroll(middle(), DOWN);
-            wmove(middle()->win,
-                  getCursorLine() /* - getCurrentVisibleLines().first*/, 0);
-        } else {
-            // isAtBottomOfWindow() uses it so must change after
-            setCursorLine(getCursorLine() + 1);
-            wmove(middle()->win,
-                  getCursorLine() /* - getCurrentVisibleLines().first*/, 0);
-        }
-        attr_line(middle(), SELECTED);
+
+        setCursorLine(getCursorLine() + 1);
+        wmove(middle()->win, getCursorLine(), 0);
+        attr_line(middle(), SELECTED);  // add highlighting on 'new' line
         break;
     case LEFT: getPath()->goUp(); break;
     case RIGHT: getPath()->goDown(); break;
     }
-#if LOG_LEVEL >= DEBUG
     log->debug(getCursorLine(), "Cursor line");
-#endif
 }
 
+/**
+ * Scroll the window, i.e. move all elements 1 line in the direction
+ *
+ * @param win: the window to scroll
+ * @param direction: direction to scroll
+ */
 void Miller::scroll(Window *win, Direction direction) {
     switch (direction) {
     case UP: {
-        // setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first
-        // - 1, getCurrentVisibleLines().second - 1));
         win->starty--;
         break;
     }
-    case DOWN:
-        // setCurrentVisibleLines(std::make_pair(getCurrentVisibleLines().first
-        // + 1, getCurrentVisibleLines().second + 1));
-        win->starty++;
-        break;
+    case DOWN: win->starty++; break;
     default:;
     }
-    prefresh(win->win, win->starty, win->startx, win->posy, win->posx,
-             win->vsizey, win->vsizex);
-#if LOG_LEVEL >= DEBUG
+    prefresh(win->win, win->starty, win->startx, win->posy, win->posx, win->vsizey, win->vsizex);
     log->debug(win, "Scroll");
-#endif
 }
 
 Miller *miller;

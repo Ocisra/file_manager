@@ -1,4 +1,4 @@
-
+#include "log.hpp"
 #include "miller.hpp"
 #include "path.hpp"
 
@@ -14,17 +14,19 @@
 
 
 /**
- * @brief Clean exit
+ * Clean exit
  */
 int quit() {
     delete miller;
     endwin();
+    log->info("Quitting");
+    delete log;
     exit(0);
 }
 
 
 /**
- * @brief Create custom colors and pairs
+ * Create custom colors and pairs
  */
 void init_colors() {
     init_color(SELECTED_BG, 200, 200, 200);
@@ -34,7 +36,7 @@ void init_colors() {
 
 
 /**
- * @brief Handle signals sent to the program
+ * Handle signals sent to the program
  *
  * @param signum: signal number
  */
@@ -44,7 +46,10 @@ void signal_handler(int signum) {
     }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    log = new Logger("/tmp/file_manager.log", Logger::Log_Debug);
+    log->info("Starting with " + std::to_string(argc) + " arguments");
+
     initscr();
     start_color();
     cbreak();
@@ -52,7 +57,7 @@ int main() {
     curs_set(0);
     init_colors();
 
-    signal(SIGWINCH, signal_handler);
+    // signal(SIGWINCH, signal_handler);
 
     miller = new Miller;
 
@@ -60,11 +65,11 @@ int main() {
 
     int c;
 
-
     while (true) {
         c = wgetch(miller->middle()->win);
 
         switch (c) {
+        case KEY_RESIZE: miller->resize(); break;
         case 'q': quit();
         case 'k': miller->move(UP); break;
         case 'j': miller->move(DOWN); break;
