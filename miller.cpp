@@ -10,7 +10,9 @@
 Logger *log;
 
 
-Miller::Miller() {
+Miller::Miller(unsigned int scrolloff) {
+    path = new Path;
+
     // get the size of the window
     int maxx = getmaxx(stdscr);
     int maxy = getmaxy(stdscr);
@@ -22,6 +24,8 @@ Miller::Miller() {
     auto setWindow = [](Window *win, int sizex, int sizey, int startx, int starty,
                         int posx, int posy, int vsizex, int vsizey) {
         win->win    = newpad(sizey, sizex);
+        win->sizex  = sizex;
+        win->sizey  = sizey;
         win->startx = startx;
         win->starty = starty;
         win->posx   = posx;
@@ -31,13 +35,20 @@ Miller::Miller() {
     };
 
     // Create the 3 panels
-    setWindow(left(), maxx / 8, MAX_LINES, 0, 0, 0, 0, maxx / 8 - 1, maxy - 1);
-    setWindow(middle(), 3 * maxx / 8, MAX_LINES, 0, 0, maxx / 8, 0, 3 * maxx / 8 - 1, maxy - 1);
-    setWindow(right(), maxx / 2, MAX_LINES, 0, 0, maxx / 2, 0, maxx / 2, maxy - 1);
-
-    path = new Path;
+    setWindow(left(), maxx / 8, getPath()->getNumOfEntry(getPath()->getParent()), 0, 0, 0,
+              0, maxx / 8 - 1, maxy - 1);
+    setWindow(middle(), 3 * maxx / 8, getPath()->getNumOfEntry(getPath()->getCurrent()),
+              0, 0, maxx / 8, 0, 3 * maxx / 8 - 1, maxy - 1);
+    setWindow(right(), maxx / 2, getPath()->getNumOfEntry(getPath()->getChild()), 0, 0,
+              maxx / 2, 0, maxx / 2, maxy - 1);
 
     setCursorLine(0);
+    // Set scrolloff accordig to the size of the window
+    setWantedScrolloff(scrolloff);
+    if (((unsigned)maxy - 1) / 2 > getWantedScrolloff())
+        setScrolloff(getWantedScrolloff());
+    else
+        setScrolloff((maxy - 1) / 2);
 
     draw();
 
@@ -118,14 +129,23 @@ void Miller::resize() {
     setWindow(middle(), maxx / 8, 0, 3 * maxx / 8 - 1, maxy - 1);
     setWindow(right(), maxx / 2, 0, maxx / 2, maxy - 1);
 
+    // Set scrolloff accordig to the size of the window
+    if (((unsigned)maxy - 1) / 2 > getWantedScrolloff())
+        setScrolloff(getWantedScrolloff());
+    else
+        setScrolloff((maxy - 1) / 2);
+
+    // clear the screen, otherwise the charcater that are in place that won't be covered
+    // by a Window won't be cleared giving a trailing effect
+    wclear(stdscr);
+    wrefresh(stdscr);
+
     prefresh(left()->win, left()->starty, left()->startx, left()->posy, left()->posx,
              left()->vsizey, left()->vsizex);
     prefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy,
              middle()->posx, middle()->vsizey, middle()->vsizex);
     prefresh(right()->win, right()->starty, right()->startx, right()->posy, right()->posx,
              right()->vsizey, right()->vsizex);
-
-    draw();
 }
 
 /**
@@ -141,7 +161,7 @@ void Miller::move(Direction direction) {
 
         attr_line(middle(), 0);  // remove highlighting on 'old' line
 
-        if (isAtTopOfWindow() && getCursorLine() > SCROLLOFF)
+        if (isAtTopOfWindow() && getCursorLine() > getScrolloff())
             scroll(middle(), UP);
 
         setCursorLine(getCursorLine() - 1);
@@ -155,7 +175,8 @@ void Miller::move(Direction direction) {
         attr_line(middle(), 0);  // remove highlighting on 'old' line
 
         if (isAtBottomOfWindow()
-            && getCursorLine() + SCROLLOFF < getPath()->getNumOfEntry(getPath()->getCurrent()) - 1)
+            && getCursorLine() + getScrolloff()
+                 < getPath()->getNumOfEntry(getPath()->getCurrent()) - 1)
             scroll(middle(), DOWN);
 
         setCursorLine(getCursorLine() + 1);

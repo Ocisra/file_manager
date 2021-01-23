@@ -13,6 +13,10 @@
 #include <unistd.h>
 
 
+/// Test config ///////////
+#define SCROLLOFF 3
+/// ///////////////////////
+
 /**
  * Clean exit
  */
@@ -59,7 +63,7 @@ int main(int argc, char *argv[]) {
 
     // signal(SIGWINCH, signal_handler);
 
-    miller = new Miller;
+    miller = new Miller(SCROLLOFF);
 
     keypad(stdscr, TRUE);
 
