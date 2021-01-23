@@ -4,8 +4,12 @@
 #ifndef PATH_HPP
 #define PATH_HPP
 
+#include "log.hpp"
+
+#include <cctype>
 #include <filesystem>
 #include <set>
+#include <string>
 
 #include <ncurses.h>
 
@@ -14,13 +18,28 @@
 
 namespace fs = std::filesystem;
 
+
+/**
+ * Custom sort function to not be case-sensible
+ */
+auto contentSort = [](fs::path a, fs::path b) {
+    std::string aa = a.filename();
+    std::string bb = b.filename();
+    for (auto &c : aa)
+        c = std::tolower(c);
+    for (auto &c : bb)
+        c = std::tolower(c);
+    return aa < bb;
+};
+
 /**
  * The content of a director.
  * Uses `std::set` to automatically sort the entries alphabetically
  */
 struct Content {
-    std::set<fs::path> dirs;
-    std::set<fs::path> files;
+    std::set<fs::path, decltype(contentSort)> dirs;
+    std::set<fs::path, decltype(contentSort)> files;
+    unsigned int numEntries;
 };
 
 struct Window;  // in miller.hpp
@@ -36,7 +55,8 @@ class Path {
     void goDown();
     void display(Window *win, Content *content);
     fs::path getFileByLine(unsigned int line);
-    fs::path getPath() { return this->path; }
+    inline fs::path getPath() { return this->path; }
+    inline void setPath(fs::path p) { this->path = p; }
 
     /// Get the corresponding content
     inline Content *getParent() { return parent; }
@@ -48,7 +68,7 @@ class Path {
     inline void setChild(Content *c) { child = c; }
 
     template <typename T>
-    T getNthElement(std::set<T> &s, int n);
+    T getNthElement(std::set<T, decltype(contentSort)> &s, unsigned int n);
     inline unsigned int getNumOfEntry(Content *content) {
         return content->dirs.size() + content->files.size();
     }

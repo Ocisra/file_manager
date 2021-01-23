@@ -46,12 +46,12 @@ void init_colors() {
  */
 void signal_handler(int signum) {
     switch (signum) {
-    case SIGWINCH: miller->resize(); break;
+    case SIGWINCH: miller->resizeTerm(); break;
     }
 }
 
 int main(int argc, char *argv[]) {
-    log = new Logger("/tmp/file_manager.log", Logger::Log_Debug);
+    log = new Logger("/tmp/file_manager.log", Logger::Log_Trace);
     log->info("Starting with " + std::to_string(argc) + " arguments");
 
     initscr();
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
         c = wgetch(miller->middle()->win);
 
         switch (c) {
-        case KEY_RESIZE: miller->resize(); break;
+        case KEY_RESIZE: miller->resizeTerm(); break;
         case 'q': quit();
         case 'k': miller->move(UP); break;
         case 'j': miller->move(DOWN); break;

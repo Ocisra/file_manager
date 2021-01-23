@@ -35,12 +35,12 @@ Miller::Miller(unsigned int scrolloff) {
     };
 
     // Create the 3 panels
-    setWindow(left(), maxx / 8, getPath()->getNumOfEntry(getPath()->getParent()), 0, 0, 0,
-              0, maxx / 8 - 1, maxy - 1);
-    setWindow(middle(), 3 * maxx / 8, getPath()->getNumOfEntry(getPath()->getCurrent()),
-              0, 0, maxx / 8, 0, 3 * maxx / 8 - 1, maxy - 1);
-    setWindow(right(), maxx / 2, getPath()->getNumOfEntry(getPath()->getChild()), 0, 0,
-              maxx / 2, 0, maxx / 2, maxy - 1);
+    setWindow(left(), maxx / 8, getPath()->getParent()->numEntries, 0, 0, 0, 0,
+              maxx / 8 - 1, maxy - 1);
+    setWindow(middle(), 3 * maxx / 8, getPath()->getCurrent()->numEntries, 0, 0, maxx / 8,
+              0, 3 * maxx / 8 - 1, maxy - 1);
+    setWindow(right(), maxx / 2, getPath()->getChild()->numEntries, 0, 0, maxx / 2, 0,
+              maxx / 2, maxy - 1);
 
     setCursorLine(0);
     // Set scrolloff accordig to the size of the window
@@ -112,9 +112,9 @@ void Miller::draw() {
 }
 
 /**
- * Resize the application to fit the size of the terminal
+ * Resize the windows to fit the size of the terminal
  */
-void Miller::resize() {
+void Miller::resizeTerm() {
     int maxx, maxy;
     getmaxyx(stdscr, maxy, maxx);
 
@@ -175,16 +175,55 @@ void Miller::move(Direction direction) {
         attr_line(middle(), 0);  // remove highlighting on 'old' line
 
         if (isAtBottomOfWindow()
-            && getCursorLine() + getScrolloff()
-                 < getPath()->getNumOfEntry(getPath()->getCurrent()) - 1)
+            && getCursorLine() + getScrolloff() < getPath()->getCurrent()->numEntries - 1)
             scroll(middle(), DOWN);
 
         setCursorLine(getCursorLine() + 1);
         wmove(middle()->win, getCursorLine(), 0);
         attr_line(middle(), SELECTED);  // add highlighting on 'new' line
         break;
-    case LEFT: getPath()->goUp(); break;
-    case RIGHT: getPath()->goDown(); break;
+    case LEFT: {
+        if (getPath()->getPath().filename().string() == "/")
+            break;
+
+        auto setWindow = [](Window *win, int sizey, int startx, int starty) {
+            win->sizey  = sizey;
+            win->startx = startx;
+            win->starty = starty;
+        };
+
+        wclear(stdscr);
+        wrefresh(stdscr);
+        getPath()->goUp();
+
+        // resize the pad
+        setWindow(left(), getPath()->getParent()->numEntries, 0, 0);
+        setWindow(middle(), getPath()->getCurrent()->numEntries, 0, 0);
+        setWindow(right(), getPath()->getChild()->numEntries, 0, 0);
+
+        draw();
+    } break;
+    case RIGHT: /*{
+        if (!fs::is_directory(getPath()->getFileByLine(getCursorLine())))
+            break;
+
+        auto setWindow = [](Window *win, int sizey, int startx, int starty) {
+            win->sizey  = sizey;
+            win->startx = startx;
+            win->starty = starty;
+        };
+
+        wclear(stdscr);
+        wrefresh(stdscr);
+        getPath()->goDown();
+
+        // resize the pad
+        setWindow(left(), getPath()->getParent()->numEntries, 0, 0);
+        setWindow(middle(), getPath()->getCurrent()->numEntries, 0, 0);
+        setWindow(right(), getPath()->getChild()->numEntries, 0, 0);
+
+        draw();
+    }*/ break;
     }
     log->debug(getCursorLine(), "Cursor line");
 }
@@ -197,10 +236,7 @@ void Miller::move(Direction direction) {
  */
 void Miller::scroll(Window *win, Direction direction) {
     switch (direction) {
-    case UP: {
-        win->starty--;
-        break;
-    }
+    case UP: win->starty--; break;
     case DOWN: win->starty++; break;
     default:;
     }

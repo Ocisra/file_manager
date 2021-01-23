@@ -7,38 +7,72 @@
 
 #include <ncurses.h>
 
+
+/**
+ * Populate the content of a directory
+ *
+ * @param content: content to populate
+ * @param path: path tracked by the content
+ */
+static void populateContent(Content *content, const fs::path &path) {
+    for (auto &p : fs::directory_iterator(path)) {
+        if (p.is_directory())
+            content->dirs.emplace(p.path());
+        else
+            content->files.emplace(p.path());
+    }
+    content->numEntries = content->dirs.size() + content->files.size();
+}
+
 Path::Path() {
-    this->path = fs::current_path();
+    setPath(fs::current_path());
 
     setParent(new Content);
     setCurrent(new Content);
     setChild(new Content);
 
-    // get the content of the current directory
-    for (auto &p : fs::directory_iterator(this->path)) {
-        if (p.is_directory())
-            getCurrent()->dirs.emplace(p.path());
-        else
-            getCurrent()->files.emplace(p.path());
-    }
-    // get the content of the parent directory
-    for (auto &p : fs::directory_iterator(this->path.parent_path())) {
-        if (p.is_directory())
-            getParent()->dirs.emplace(p.path());
-        else
-            getParent()->files.emplace(p.path());
-    }
+
+
+    populateContent(getCurrent(), getPath());
+    populateContent(getParent(), getPath().parent_path());
 }
 
 Path::~Path() {
-    delete getParent();
+    if (getParent() != nullptr)
+        delete getParent();
     delete getCurrent();
     delete getChild();
 }
 
-void Path::goUp() {}
+/**
+ * Go up a directory
+ */
+void Path::goUp() {
+    setPath(getPath().parent_path());
 
-void Path::goDown() {}
+    delete getChild();
+
+    setChild(getCurrent());
+    setCurrent(getParent());
+    if (getPath().parent_path().filename() != "/") {
+        setParent(new Content);
+        populateContent(getParent(), getPath().parent_path());
+    }
+    else
+        setParent(nullptr);
+}
+
+/**
+ * Go down a directory
+ */
+void Path::goDown() {
+    setPath(getFileByLine(miller->getCursorLine()));
+
+    setParent(getCurrent());
+    setCurrent(getChild());
+    setChild(new Content);
+    populateContent(getChild(), getFileByLine(0));
+}
 
 /**
  * Display the content of a directory in a window
@@ -47,6 +81,8 @@ void Path::goDown() {}
  * @param content: content to display
  */
 void Path::display(Window *win, Content *content) {
+    if (content == nullptr)
+        return;
     // print directories before
     for (auto p = content->dirs.begin(); p != content->dirs.end(); p++) {
         miller->noWrapOutput(win, p->filename().string() + "\n");
@@ -74,9 +110,9 @@ fs::path Path::getFileByLine(unsigned int line) {
  * @param n: number of the element
  */
 template <typename T>
-T Path::getNthElement(std::set<T> &s, int n) {
+T Path::getNthElement(std::set<T, decltype(contentSort)> &s, unsigned int n) {
     typename std::set<T>::iterator it = s.begin();
-    for (int i = 0; i < n; i++)
+    for (unsigned i = 0; i < n; i++)
         it++;
     return *it;
 }

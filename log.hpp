@@ -11,6 +11,7 @@
  *
  * @section HOWTO
  * Include headers specific to your project between the dedicated comments
+ * Include forward declarations between the dedicated comments
  * Include custom overloads of the `log` function between the dedicated comments
  *
  * Use like this:
@@ -28,9 +29,11 @@
 #define LOG_HPP
 
 /// Include custom headers here
-#include "miller.hpp"
-#include "path.hpp"
 /// End of custom headers
+
+/// Forward declare here
+struct Window;
+/// End of forward declaration
 
 #include <fstream>
 #include <string>
@@ -50,14 +53,14 @@ class Logger {
      * the path to the logging file.
      */
     template <typename T>
-    void log(T &&var, std::string &&title) {
+    void log(T &var, const std::string &title) {
         std::ofstream log_file;
         log_file.open(log_file_path, std::ios::app);
         log_file << title << ": " << var << std::endl;
         log_file.close();
     }
-    void log(Window *win, std::string &&title = "");
-    void log(std::string &&msg, unsigned int &&depth);
+    void log(Window *win, const std::string &title = "");
+    void log(std::string &msg, unsigned int &depth);
     /**
      * End of custom overloads
      */
@@ -93,7 +96,7 @@ class Logger {
      */
     Logger(std::string &&lf, Log_Levels &&level) {
         log_file_path = lf;
-        log_level = level;
+        log_level     = level;
         // Create or clear the file
         std::ofstream log_file;
         log_file.open(log_file_path, std::ios::trunc);
