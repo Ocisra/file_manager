@@ -31,10 +31,9 @@ Path::Path() {
     setCurrent(new Content);
     setChild(new Content);
 
-
-
     populateContent(getCurrent(), getPath());
     populateContent(getParent(), getPath().parent_path());
+    populateContent(getChild(), getFileByLine(0));
 }
 
 Path::~Path() {
@@ -47,7 +46,7 @@ Path::~Path() {
 /**
  * Go up a directory
  */
-void Path::goUp() {
+bool Path::goUp() {
     setPath(getPath().parent_path());
 
     delete getChild();
@@ -57,9 +56,11 @@ void Path::goUp() {
     if (getPath().parent_path().filename() != "/") {
         setParent(new Content);
         populateContent(getParent(), getPath().parent_path());
-    }
-    else
+        return true;
+    } else {
         setParent(nullptr);
+        return false;
+    }
 }
 
 /**
@@ -68,10 +69,24 @@ void Path::goUp() {
 void Path::goDown() {
     setPath(getFileByLine(miller->getCursorLine()));
 
+    Content *tmp = getParent();
+
     setParent(getCurrent());
     setCurrent(getChild());
     setChild(new Content);
-    populateContent(getChild(), getFileByLine(0));
+    try {
+        // This line is dangerous because the function need access to the content of a
+        // directory we are not sure is readable
+        populateContent(getChild(), getPath());
+        delete tmp;  // This won't cause error so I can use 'tmp' in the catch block
+    } catch (const fs::filesystem_error &e) {
+        log->debug(e.what());
+        setPath(getPath().parent_path());
+        delete getChild();
+        setChild(getCurrent());
+        setCurrent(getParent());
+        setParent(tmp);
+    }
 }
 
 /**
@@ -81,8 +96,9 @@ void Path::goDown() {
  * @param content: content to display
  */
 void Path::display(Window *win, Content *content) {
-    if (content == nullptr)
+    if (content == nullptr) {
         return;
+    }
     // print directories before
     for (auto p = content->dirs.begin(); p != content->dirs.end(); p++) {
         miller->noWrapOutput(win, p->filename().string() + "\n");
@@ -91,6 +107,37 @@ void Path::display(Window *win, Content *content) {
     for (auto p = content->files.begin(); p != content->files.end(); p++) {
         miller->noWrapOutput(win, p->filename().string() + "\n");
     }
+}
+
+/**
+ * Preview the child directory in the right panel
+ *
+ * @param win: window in which to preview
+ */
+void Path::previewChild(Window *win) {
+    wclear(win->win);
+
+    delete getChild();
+    setChild(new Content);
+    try {
+        if (fs::is_directory(getFileByLine(miller->getCursorLine()))) {
+            auto setWindow = [](Window *win, int sizey, int startx, int starty) {
+                win->sizey  = sizey;
+                win->startx = startx;
+                win->starty = starty;
+                wresize(win->win, win->sizey > win->vsizey ? win->sizey : win->vsizey,
+                        win->sizex > win->vsizex ? win->sizex : win->vsizex);
+            };
+
+            populateContent(getChild(), getFileByLine(miller->getCursorLine()));
+            setWindow(win, getChild()->numEntries, 0, 0);
+            display(win, getChild());
+        }
+    } catch (const fs::filesystem_error &e) {
+        log->debug(e.what());
+    }
+    prefresh(win->win, win->starty, win->startx, win->posy, win->posx,
+             win->vsizey + win->posy, win->vsizex + win->posx);
 }
 
 /**

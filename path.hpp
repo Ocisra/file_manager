@@ -20,16 +20,34 @@ namespace fs = std::filesystem;
 
 
 /**
- * Custom sort function to not be case-sensible
+ * Custom sort function.
+ * It is not case sensible and handle numbers as expected (lower go first, not shorter)
  */
 auto contentSort = [](fs::path a, fs::path b) {
-    std::string aa = a.filename();
-    std::string bb = b.filename();
-    for (auto &c : aa)
+    std::string as = a.filename();
+    std::string bs = b.filename();
+
+    // Sort string filename
+    for (auto &c : as)
         c = std::tolower(c);
-    for (auto &c : bb)
+    for (auto &c : bs)
         c = std::tolower(c);
-    return aa < bb;
+
+    // Sort int filename (e.g. /proc/PID) 
+    auto to_int = [](std::string &s, int &i) {
+        for (auto &c : s) {
+            if (!isdigit(c))
+                return false;
+        }
+        i = std::stoi(s);
+        return true;
+    };
+
+    int ai, bi;
+    if (to_int(as, ai) && to_int(bs, bi))
+        return ai < bi;
+
+    return as < bs;
 };
 
 /**
@@ -39,7 +57,7 @@ auto contentSort = [](fs::path a, fs::path b) {
 struct Content {
     std::set<fs::path, decltype(contentSort)> dirs;
     std::set<fs::path, decltype(contentSort)> files;
-    unsigned int numEntries;
+    unsigned int numEntries = 0;
 };
 
 struct Window;  // in miller.hpp
@@ -51,9 +69,10 @@ class Path {
     public:
     Path();
     ~Path();
-    void goUp();
+    bool goUp();
     void goDown();
     void display(Window *win, Content *content);
+    void previewChild(Window *win);
     fs::path getFileByLine(unsigned int line);
     inline fs::path getPath() { return this->path; }
     inline void setPath(fs::path p) { this->path = p; }

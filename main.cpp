@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
     int c;
 
     while (true) {
-        c = wgetch(miller->middle()->win);
+        c = wgetch(miller->right()->win);
 
         switch (c) {
         case KEY_RESIZE: miller->resizeTerm(); break;

@@ -78,12 +78,13 @@ Miller::~Miller() {
  * @param output: the string to output
  */
 void Miller::noWrapOutput(Window *win, std::string output) {
-    int maxx = getmaxx(win->win);
+    int maxx = win->vsizex;
     if (output.length() > (unsigned long)maxx) {
         output = output.substr(0, maxx);
     }
     wprintw(win->win, output.c_str());
-    prefresh(win->win, win->sizey, win->sizex, win->posy, win->posx, win->vsizey, win->vsizex);
+    prefresh(win->win, win->starty, win->startx, win->posy, win->posx,
+             win->vsizey + win->posy, win->vsizex + win->posx);
 }
 
 /**
@@ -92,20 +93,27 @@ void Miller::noWrapOutput(Window *win, std::string output) {
  * content of the windows
  */
 void Miller::draw() {
+    wclear(left()->win);
+    wclear(middle()->win);
+    wclear(right()->win);
+
     // useful in case the UI needs to be debugged
     // box(left()->win, 0, 0);
     // box(middle()->win, 0, 0);
     // box(right()->win, 0, 0);
 
+    setCursorLine(0);
+
     getPath()->display(left(), getPath()->getParent());
     getPath()->display(middle(), getPath()->getCurrent());
+    getPath()->display(right(), getPath()->getChild());
 
     prefresh(left()->win, left()->starty, left()->startx, left()->posy, left()->posx,
-             left()->vsizey, left()->vsizex);
-    prefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy,
-             middle()->posx, middle()->vsizey, middle()->vsizex);
+             left()->vsizey + left()->posy, left()->vsizex + left()->posx);
+    prefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy, middle()->posx,
+             middle()->vsizey + middle()->posy, middle()->vsizex + middle()->posx);
     prefresh(right()->win, right()->starty, right()->startx, right()->posy, right()->posx,
-             right()->vsizey, right()->vsizex);
+             right()->vsizey + right()->posy, right()->vsizex + right()->posx);
 
     wmove(middle()->win, 0, 0);
     attr_line(middle(), SELECTED);
@@ -141,11 +149,11 @@ void Miller::resizeTerm() {
     wrefresh(stdscr);
 
     prefresh(left()->win, left()->starty, left()->startx, left()->posy, left()->posx,
-             left()->vsizey, left()->vsizex);
-    prefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy,
-             middle()->posx, middle()->vsizey, middle()->vsizex);
+             left()->vsizey + left()->posy, left()->vsizex + left()->posx);
+    prefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy, middle()->posx,
+             middle()->vsizey + middle()->posy, middle()->vsizex + middle()->posx);
     prefresh(right()->win, right()->starty, right()->startx, right()->posy, right()->posx,
-             right()->vsizey, right()->vsizex);
+             right()->vsizey + right()->posy, right()->vsizex + right()->posx);
 }
 
 /**
@@ -154,6 +162,13 @@ void Miller::resizeTerm() {
  * @param direction: the direction to go
  */
 void Miller::move(Direction direction) {
+    auto setWindow = [](Window *win, int sizey, int startx, int starty) {
+        win->sizey  = sizey;
+        win->startx = startx;
+        win->starty = starty;
+        wresize(win->win, win->sizey, win->sizex);
+    };
+
     switch (direction) {
     case UP:
         if (isAtTopOfEntries())
@@ -166,7 +181,11 @@ void Miller::move(Direction direction) {
 
         setCursorLine(getCursorLine() - 1);
         wmove(middle()->win, getCursorLine(), 0);
+
+        getPath()->previewChild(right());
+
         attr_line(middle(), SELECTED);  // add highlighting on 'new' line
+
         break;
     case DOWN:
         if (isAtBottomOfEntries())
@@ -180,21 +199,43 @@ void Miller::move(Direction direction) {
 
         setCursorLine(getCursorLine() + 1);
         wmove(middle()->win, getCursorLine(), 0);
+
+        getPath()->previewChild(right());
+
         attr_line(middle(), SELECTED);  // add highlighting on 'new' line
+
         break;
     case LEFT: {
         if (getPath()->getPath().filename().string() == "/")
             break;
 
-        auto setWindow = [](Window *win, int sizey, int startx, int starty) {
-            win->sizey  = sizey;
-            win->startx = startx;
-            win->starty = starty;
-        };
+         wclear(stdscr);
+         wrefresh(stdscr);
 
-        wclear(stdscr);
-        wrefresh(stdscr);
         getPath()->goUp();
+        setCursorLine(0);
+
+        getPath()->previewChild(right());
+
+        // resize the pad
+        setWindow(left(), getPath()->getParent() == nullptr ? 1 : getPath()->getParent()->numEntries,
+                  0, 0);
+        setWindow(middle(), getPath()->getCurrent()->numEntries, 0, 0);
+        setWindow(right(), getPath()->getChild()->numEntries, 0, 0);
+
+        draw();
+    } break;
+    case RIGHT: {
+        if (!fs::is_directory(getPath()->getFileByLine(getCursorLine())))
+            break;
+
+         wclear(stdscr);
+         wrefresh(stdscr);
+
+        getPath()->goDown();
+        setCursorLine(0);
+
+        getPath()->previewChild(right());
 
         // resize the pad
         setWindow(left(), getPath()->getParent()->numEntries, 0, 0);
@@ -203,27 +244,6 @@ void Miller::move(Direction direction) {
 
         draw();
     } break;
-    case RIGHT: /*{
-        if (!fs::is_directory(getPath()->getFileByLine(getCursorLine())))
-            break;
-
-        auto setWindow = [](Window *win, int sizey, int startx, int starty) {
-            win->sizey  = sizey;
-            win->startx = startx;
-            win->starty = starty;
-        };
-
-        wclear(stdscr);
-        wrefresh(stdscr);
-        getPath()->goDown();
-
-        // resize the pad
-        setWindow(left(), getPath()->getParent()->numEntries, 0, 0);
-        setWindow(middle(), getPath()->getCurrent()->numEntries, 0, 0);
-        setWindow(right(), getPath()->getChild()->numEntries, 0, 0);
-
-        draw();
-    }*/ break;
     }
     log->debug(getCursorLine(), "Cursor line");
 }
@@ -240,7 +260,8 @@ void Miller::scroll(Window *win, Direction direction) {
     case DOWN: win->starty++; break;
     default:;
     }
-    prefresh(win->win, win->starty, win->startx, win->posy, win->posx, win->vsizey, win->vsizex);
+    prefresh(win->win, win->starty, win->startx, win->posy, win->posx,
+             win->vsizey + win->posy, win->vsizex + win->posx);
     log->debug(win, "Scroll");
 }
 

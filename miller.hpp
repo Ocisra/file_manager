@@ -77,7 +77,7 @@ class Miller {
     }
     inline bool isAtTopOfEntries() { return getCursorLine() == 0; }
     inline bool isAtBottomOfEntries() {
-        return getCursorLine() == getPath()->getCurrent()->numEntries;
+        return getCursorLine() == getPath()->getCurrent()->numEntries - 1;
     }
     inline unsigned int getCursorLine() { return cursorLine; }
     inline void setCursorLine(unsigned int cl) { cursorLine = cl; }

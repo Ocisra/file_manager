@@ -16,7 +16,7 @@ void Logger::log(Window *win, const std::string& title) {
              << "\t\tsizey: " << win->sizey << "\nstartx: " << win->startx
              << "\t\tstarty: " << win->starty << "\nposx: " << win->posx
              << "\t\tposy: " << win->posy << "\nvsizex: " << win->vsizex
-             << "\t\tsizey: " << win->vsizey << "\n"
+             << "\t\tvsizey: " << win->vsizey << "\n"
              << std::endl;
     log_file.close();
 }
