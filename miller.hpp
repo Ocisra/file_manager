@@ -25,7 +25,9 @@ enum Colors {
     /* 0 is reserved for default */
     SELECTED = 1,
     SELECTED_BG,
-    SELECTED_FG
+    SELECTED_FG,
+
+    DIRECTORY
 };
 
 /// Direction for movements

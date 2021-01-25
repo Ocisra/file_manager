@@ -41,7 +41,7 @@ SortUsingDeclarations: true
 # Penalties
 # nothing will be more than ColumnLimit + 10
 PenaltyBreakAssignment: 0
-PenaltyBreakBeforeFirstCallParameter: 10
+PenaltyBreakBeforeFirstCallParameter: 9
 PenaltyBreakComment: 0
 PenaltyBreakFirstLessLess: 0
 PenaltyBreakString: 5

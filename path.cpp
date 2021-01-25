@@ -53,7 +53,7 @@ bool Path::goUp() {
 
     setChild(getCurrent());
     setCurrent(getParent());
-    if (getPath().parent_path().filename() != "/") {
+    if (getPath().string() != "/") {
         setParent(new Content);
         populateContent(getParent(), getPath().parent_path());
         return true;
@@ -100,9 +100,11 @@ void Path::display(Window *win, Content *content) {
         return;
     }
     // print directories before
+    wattron(win->win, COLOR_PAIR(DIRECTORY));
     for (auto p = content->dirs.begin(); p != content->dirs.end(); p++) {
         miller->noWrapOutput(win, p->filename().string() + "\n");
     }
+    wattroff(win->win, COLOR_PAIR(DIRECTORY));
     // print other files after
     for (auto p = content->files.begin(); p != content->files.end(); p++) {
         miller->noWrapOutput(win, p->filename().string() + "\n");
@@ -125,7 +127,7 @@ void Path::previewChild(Window *win) {
                 win->sizey  = sizey;
                 win->startx = startx;
                 win->starty = starty;
-                wresize(win->win, win->sizey > win->vsizey ? win->sizey : win->vsizey,
+                wresize(win->win, win->sizey > win->vsizey ? win->sizey : win->vsizey + 1,
                         win->sizex > win->vsizex ? win->sizex : win->vsizex);
             };
 

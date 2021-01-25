@@ -34,13 +34,15 @@ Miller::Miller(unsigned int scrolloff) {
         win->vsizey = vsizey;
     };
 
+    // clang-format off
     // Create the 3 panels
-    setWindow(left(), maxx / 8, getPath()->getParent()->numEntries, 0, 0, 0, 0,
-              maxx / 8 - 1, maxy - 1);
+    setWindow(left(), maxx / 8, getPath()->getParent()->numEntries, 0, 0,
+              0, 0 + 1 /*top bar*/, maxx / 8 - 1, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
     setWindow(middle(), 3 * maxx / 8, getPath()->getCurrent()->numEntries, 0, 0, maxx / 8,
-              0, 3 * maxx / 8 - 1, maxy - 1);
-    setWindow(right(), maxx / 2, getPath()->getChild()->numEntries, 0, 0, maxx / 2, 0,
-              maxx / 2, maxy - 1);
+              0 + 1 /*top bar*/, 3 * maxx / 8 - 1, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
+    setWindow(right(), maxx / 2, getPath()->getChild()->numEntries, 0, 0, maxx / 2,
+              0 + 1 /*top bar*/, maxx / 2, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
+    // clang-format on
 
     setCursorLine(0);
     // Set scrolloff accordig to the size of the window
@@ -133,9 +135,14 @@ void Miller::resizeTerm() {
         win->vsizey = vsizey;
     };
 
-    setWindow(left(), 0, 0, maxx / 8 - 1, maxy - 1);
-    setWindow(middle(), maxx / 8, 0, 3 * maxx / 8 - 1, maxy - 1);
-    setWindow(right(), maxx / 2, 0, maxx / 2, maxy - 1);
+    // clang-format off
+    setWindow(left(), 0, 0 + 1 /*top bar*/, maxx / 8 - 1,
+            maxy - 1 + 1 /*top bar*/ + 1 /*status bar*/);
+    setWindow(middle(), maxx / 8, 0 + 1 /*top bar*/, 3 * maxx / 8 - 1,
+            maxy - 1 + 1 /*top bar*/ + 1 /*status bar*/);
+    setWindow(right(), maxx / 2, 0 + 1 /*top bar*/, maxx / 2,
+            maxy - 1 + 1 /*top bar*/ + 1 /*status bar*/);
+    // clang-format on
 
     // Set scrolloff accordig to the size of the window
     if (((unsigned)maxy - 1) / 2 > getWantedScrolloff())
@@ -206,11 +213,12 @@ void Miller::move(Direction direction) {
 
         break;
     case LEFT: {
-        if (getPath()->getPath().filename().string() == "/")
+        if (getPath()->getPath().string() == "/") {
             break;
+        }
 
-         wclear(stdscr);
-         wrefresh(stdscr);
+        wclear(stdscr);
+        wrefresh(stdscr);
 
         getPath()->goUp();
         setCursorLine(0);
@@ -229,8 +237,8 @@ void Miller::move(Direction direction) {
         if (!fs::is_directory(getPath()->getFileByLine(getCursorLine())))
             break;
 
-         wclear(stdscr);
-         wrefresh(stdscr);
+        wclear(stdscr);
+        wrefresh(stdscr);
 
         getPath()->goDown();
         setCursorLine(0);
@@ -245,7 +253,6 @@ void Miller::move(Direction direction) {
         draw();
     } break;
     }
-    log->debug(getCursorLine(), "Cursor line");
 }
 
 /**
@@ -262,7 +269,6 @@ void Miller::scroll(Window *win, Direction direction) {
     }
     prefresh(win->win, win->starty, win->startx, win->posy, win->posx,
              win->vsizey + win->posy, win->vsizex + win->posx);
-    log->debug(win, "Scroll");
 }
 
 Miller *miller;

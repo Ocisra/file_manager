@@ -36,6 +36,8 @@ void init_colors() {
     init_color(SELECTED_BG, 200, 200, 200);
     init_color(SELECTED_FG, 1000, 1000, 1000);
     init_pair(SELECTED, SELECTED_FG, SELECTED_BG);
+
+    init_pair(DIRECTORY, COLOR_BLUE, COLOR_BLACK);
 }
 
 
