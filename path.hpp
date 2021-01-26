@@ -33,7 +33,7 @@ auto contentSort = [](fs::path a, fs::path b) {
     for (auto &c : bs)
         c = std::tolower(c);
 
-    // Sort int filename (e.g. /proc/PID) 
+    // Sort int filename (e.g. /proc/PID)
     auto to_int = [](std::string &s, int &i) {
         for (auto &c : s) {
             if (!isdigit(c))
@@ -55,7 +55,9 @@ auto contentSort = [](fs::path a, fs::path b) {
  * Uses `std::set` to automatically sort the entries alphabetically
  */
 struct Content {
+    // Directories are treated separately to be placed on top
     std::set<fs::path, decltype(contentSort)> dirs;
+    // 'files' contains everything else
     std::set<fs::path, decltype(contentSort)> files;
     unsigned int numEntries = 0;
 };
@@ -67,13 +69,14 @@ struct Window;  // in miller.hpp
  */
 class Path {
     public:
-    Path();
+    Path(fs::path start_path);
     ~Path();
     bool goUp();
     void goDown();
     void display(Window *win, Content *content);
     void previewChild(Window *win);
     fs::path getFileByLine(unsigned int line);
+    fs::file_type getFileType(Content *content, unsigned int n);
     inline fs::path getPath() { return this->path; }
     inline void setPath(fs::path p) { this->path = p; }
 

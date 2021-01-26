@@ -24,8 +24,8 @@ static void populateContent(Content *content, const fs::path &path) {
     content->numEntries = content->dirs.size() + content->files.size();
 }
 
-Path::Path() {
-    setPath(fs::current_path());
+Path::Path(fs::path start_path) {
+    setPath(start_path);
 
     setParent(new Content);
     setCurrent(new Content);
@@ -107,6 +107,7 @@ void Path::display(Window *win, Content *content) {
     wattroff(win->win, COLOR_PAIR(DIRECTORY));
     // print other files after
     for (auto p = content->files.begin(); p != content->files.end(); p++) {
+        wattrset(win->win, COLOR_PAIR(miller->matchColor(fs::status(*p).type())));
         miller->noWrapOutput(win, p->filename().string() + "\n");
     }
 }
@@ -143,6 +144,20 @@ void Path::previewChild(Window *win) {
 }
 
 /**
+ * Get the filetype of the Nth element
+ *
+ * @param content: content in which to search
+ * @param n: element of which to find the filetype
+ */
+fs::file_type Path::getFileType(Content *content, unsigned int n) {
+    if (n < content->dirs.size())
+        return fs::file_type::directory;
+    n -= content->dirs.size();
+
+    return fs::status(getNthElement(content->files, n)).type();
+}
+
+/**
  * Get the file at a specific line
  */
 fs::path Path::getFileByLine(unsigned int line) {
@@ -165,5 +180,3 @@ T Path::getNthElement(std::set<T, decltype(contentSort)> &s, unsigned int n) {
         it++;
     return *it;
 }
-
-Path *path = new Path;

@@ -10,8 +10,8 @@
 Logger *log;
 
 
-Miller::Miller(unsigned int scrolloff) {
-    path = new Path;
+Miller::Miller(unsigned int scrolloff, fs::path start_path) {
+    path = new Path(start_path);
 
     // get the size of the window
     int maxx = getmaxx(stdscr);
@@ -24,6 +24,7 @@ Miller::Miller(unsigned int scrolloff) {
     auto setWindow = [](Window *win, int sizex, int sizey, int startx, int starty,
                         int posx, int posy, int vsizex, int vsizey) {
         win->win    = newpad(sizey, sizex);
+        wbkgd(win->win, COLOR_PAIR(REGULAR));
         win->sizex  = sizex;
         win->sizey  = sizey;
         win->startx = startx;
@@ -71,6 +72,24 @@ Miller::~Miller() {
     delete right();
 
     delete getPath();
+}
+
+Colors Miller::matchColor(fs::file_type ft) {
+    switch (ft) {
+        case fs::file_type::directory: return DIRECTORY;
+        case fs::file_type::regular: return REGULAR;
+        case fs::file_type::character:
+        case fs::file_type::block: return BLOCK;
+        case fs::file_type::fifo: return FIFO;
+        case fs::file_type::socket: return SOCKET;
+        case fs::file_type::symlink: return SYMLINK;
+        default: return UNKNOWN;
+    }
+}
+
+Colors Miller::getFileColor() {
+    fs::file_type type = getPath()->getFileType(getPath()->getCurrent(), getCursorLine());
+    return matchColor(type);
 }
 
 /**
@@ -137,11 +156,11 @@ void Miller::resizeTerm() {
 
     // clang-format off
     setWindow(left(), 0, 0 + 1 /*top bar*/, maxx / 8 - 1,
-            maxy - 1 + 1 /*top bar*/ + 1 /*status bar*/);
+            maxy - 1 - 1 /*top bar*/ - 1 /*status bar*/);
     setWindow(middle(), maxx / 8, 0 + 1 /*top bar*/, 3 * maxx / 8 - 1,
-            maxy - 1 + 1 /*top bar*/ + 1 /*status bar*/);
+            maxy - 1 - 1 /*top bar*/ - 1 /*status bar*/);
     setWindow(right(), maxx / 2, 0 + 1 /*top bar*/, maxx / 2,
-            maxy - 1 + 1 /*top bar*/ + 1 /*status bar*/);
+            maxy - 1 - 1 /*top bar*/ - 1 /*status bar*/);
     // clang-format on
 
     // Set scrolloff accordig to the size of the window
@@ -161,6 +180,10 @@ void Miller::resizeTerm() {
              middle()->vsizey + middle()->posy, middle()->vsizex + middle()->posx);
     prefresh(right()->win, right()->starty, right()->startx, right()->posy, right()->posx,
              right()->vsizey + right()->posy, right()->vsizex + right()->posx);
+
+    log->debug(left(), "Resize left");
+    log->debug(middle(), "Resize middle");
+    log->debug(right(), "Resize right");
 }
 
 /**
@@ -181,7 +204,7 @@ void Miller::move(Direction direction) {
         if (isAtTopOfEntries())
             break;
 
-        attr_line(middle(), 0);  // remove highlighting on 'old' line
+        attr_line(middle(), getFileColor());  // remove highlighting on 'old' line
 
         if (isAtTopOfWindow() && getCursorLine() > getScrolloff())
             scroll(middle(), UP);
@@ -198,7 +221,7 @@ void Miller::move(Direction direction) {
         if (isAtBottomOfEntries())
             break;
 
-        attr_line(middle(), 0);  // remove highlighting on 'old' line
+        attr_line(middle(), getFileColor());  // remove highlighting on 'old' line
 
         if (isAtBottomOfWindow()
             && getCursorLine() + getScrolloff() < getPath()->getCurrent()->numEntries - 1)

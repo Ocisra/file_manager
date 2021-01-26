@@ -21,14 +21,19 @@
 
 
 /// Custom colors
+// clang-format off
 enum Colors {
     /* 0 is reserved for default */
-    SELECTED = 1,
-    SELECTED_BG,
-    SELECTED_FG,
-
-    DIRECTORY
+    SELECTED = 1, SELECTED_BG,   SELECTED_FG,
+    REGULAR,       REGULAR_BG,    REGULAR_FG,
+    DIRECTORY,   DIRECTORY_BG,  DIRECTORY_FG,
+    FIFO,             FIFO_BG,       FIFO_FG,
+    SYMLINK,       SYMLINK_BG,    SYMLINK_FG,
+    BLOCK,           BLOCK_BG,      BLOCK_FG,
+    SOCKET,         SOCKET_BG,     SOCKET_FG,
+    UNKNOWN,       UNKNOWN_BG,    UNKNOWN_FG
 };
+// clang-format on
 
 /// Direction for movements
 enum Direction { LEFT, RIGHT, UP, DOWN };
@@ -48,13 +53,15 @@ struct Window {
  */
 class Miller {
     public:
-    Miller(unsigned int scrolloff);
+    Miller(unsigned int scrolloff, fs::path start_path);
     ~Miller();
     void draw();
     void resizeTerm();
     void move(Direction direction);
     void scroll(Window *win, Direction direction);
     void noWrapOutput(Window *win, std::string output);
+    Colors matchColor(fs::file_type ft);
+    Colors getFileColor();
 
     /// Get the corresponding window
     inline Window *left() { return panelLeft; }
