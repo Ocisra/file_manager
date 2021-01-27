@@ -24,14 +24,14 @@
 // clang-format off
 enum Colors {
     /* 0 is reserved for default */
-    SELECTED = 1, SELECTED_BG,   SELECTED_FG,
-    REGULAR,       REGULAR_BG,    REGULAR_FG,
-    DIRECTORY,   DIRECTORY_BG,  DIRECTORY_FG,
-    FIFO,             FIFO_BG,       FIFO_FG,
-    SYMLINK,       SYMLINK_BG,    SYMLINK_FG,
-    BLOCK,           BLOCK_BG,      BLOCK_FG,
-    SOCKET,         SOCKET_BG,     SOCKET_FG,
-    UNKNOWN,       UNKNOWN_BG,    UNKNOWN_FG
+    SELECTED = 1,   SELECTED_FG,    SELECTED_BG,
+    REGULAR,         REGULAR_FG,
+    DIRECTORY,     DIRECTORY_FG,
+    FIFO,               FIFO_FG,
+    SYMLINK,         SYMLINK_FG,
+    BLOCK,             BLOCK_FG,
+    SOCKET,           SOCKET_FG,
+    UNKNOWN,         UNKNOWN_FG
 };
 // clang-format on
 
@@ -39,12 +39,28 @@ enum Colors {
 enum Direction { LEFT, RIGHT, UP, DOWN };
 
 /// A window with all it's characteristics
-struct Window {
+class Window {
+    public:
+    void noWrapOutput(std::string output);
+    void scroll(Direction direction);
+    inline unsigned int line() { return cursorLine; }
+    inline void setLine(unsigned int cl) { cursorLine = cl; }
+
+    /// Set attributes on a whole line
+    inline void attr_line(attr_t attr, short colorPair) {
+        wchgat(win, -1, attr, colorPair, NULL);
+        prefresh(win, starty, startx, posy, posx, vsizey, vsizex);
+    }
+    inline void attr_line(short colorPair) { attr_line(A_NORMAL, colorPair); }
+
     WINDOW *win;
     unsigned int sizex, sizey;    // size of the pad
     unsigned int startx, starty;  // first character of the pad displayed
     unsigned int posx, posy;      // position on the screen of the first character
     unsigned int vsizex, vsizey;  // size of the visible region of the pad
+
+    private:
+    unsigned int cursorLine;
 };
 
 
@@ -58,8 +74,6 @@ class Miller {
     void draw();
     void resizeTerm();
     void move(Direction direction);
-    void scroll(Window *win, Direction direction);
-    void noWrapOutput(Window *win, std::string output);
     Colors matchColor(fs::file_type ft);
     Colors getFileColor();
 
@@ -68,44 +82,31 @@ class Miller {
     inline Window *middle() { return panelMiddle; }
     inline Window *right() { return panelRight; }
 
-    /// Set attributes on a whole line
-    inline void attr_line(Window *win, attr_t attr, short colorPair) {
-        wchgat(win->win, -1, attr, colorPair, NULL);
-        prefresh(win->win, win->starty, win->startx, win->posy, win->posx, win->vsizey,
-                 win->vsizex);
-    }
-    inline void attr_line(Window *win, short colorPair) {
-        attr_line(win, A_NORMAL, colorPair);
-    }
-
     inline bool isAtTopOfWindow() {
-        return getCursorLine() <= middle()->starty + getScrolloff();
+        return middle()->line() <= middle()->starty + scrolloff();
     }
     inline bool isAtBottomOfWindow() {
-        return getCursorLine() >= middle()->vsizey + middle()->starty - getScrolloff();
+        return middle()->line() >= middle()->vsizey + middle()->starty - scrolloff();
     }
-    inline bool isAtTopOfEntries() { return getCursorLine() == 0; }
+    inline bool isAtTopOfEntries() { return middle()->line() == 0; }
     inline bool isAtBottomOfEntries() {
-        return getCursorLine() == getPath()->getCurrent()->numEntries - 1;
+        return middle()->line() == path()->current()->numEntries - 1;
     }
-    inline unsigned int getCursorLine() { return cursorLine; }
-    inline void setCursorLine(unsigned int cl) { cursorLine = cl; }
-    inline unsigned int getWantedScrolloff() { return wantsScrolloff; }
+    inline unsigned int wantedScrolloff() { return wantsScrolloff; }
     inline void setWantedScrolloff(unsigned int so) { wantsScrolloff = so; }
-    inline unsigned int getScrolloff() { return scrolloff; }
-    inline void setScrolloff(unsigned int so) { scrolloff = so; }
-    inline Path *getPath() { return path; }
-    inline void setPath(Path *p) { path = p; }
+    inline unsigned int scrolloff() { return scrolloffLines; }
+    inline void setScrolloff(unsigned int so) { scrolloffLines = so; }
+    inline Path *path() { return currentPath; }
+    inline void setPath(Path *p) { currentPath = p; }
 
     private:
     unsigned int wantsScrolloff;  // the wanted scrolloff
     // when screen is too small, it might be reduced so the cursor can be visible giving:
-    unsigned int scrolloff;  // lines to keep below and above cursor
-    unsigned int cursorLine;
+    unsigned int scrolloffLines;  // lines to keep below and above cursor
     Window *panelLeft;
     Window *panelMiddle;
     Window *panelRight;
-    Path *path;
+    Path *currentPath;
 };
 
 extern Miller *miller;

@@ -23,7 +23,7 @@ namespace fs = std::filesystem;
  * Custom sort function.
  * It is not case sensible and handle numbers as expected (lower go first, not shorter)
  */
-auto contentSort = [](fs::path a, fs::path b) {
+static auto contentSort = [](fs::path a, fs::path b) {
     std::string as = a.filename();
     std::string bs = b.filename();
 
@@ -62,7 +62,7 @@ struct Content {
     unsigned int numEntries = 0;
 };
 
-struct Window;  // in miller.hpp
+class Window;  // in miller.hpp
 
 /**
  * The class representing the status of the path
@@ -77,27 +77,26 @@ class Path {
     void previewChild(Window *win);
     fs::path getFileByLine(unsigned int line);
     fs::file_type getFileType(Content *content, unsigned int n);
-    inline fs::path getPath() { return this->path; }
-    inline void setPath(fs::path p) { this->path = p; }
+    inline fs::path path() { return currentPath; }
+    inline void setPath(fs::path p) { currentPath = p; }
 
     /// Get the corresponding content
-    inline Content *getParent() { return parent; }
-    inline Content *getCurrent() { return current; }
-    inline Content *getChild() { return child; }
+    inline Content *parent() { return parentContent; }
+    inline Content *current() { return currentContent; }
+    inline Content *child() { return childContent; }
     /// Set the corresponding content
-    inline void setParent(Content *c) { parent = c; }
-    inline void setCurrent(Content *c) { current = c; }
-    inline void setChild(Content *c) { child = c; }
+    inline void setParent(Content *c) { parentContent = c; }
+    inline void setCurrent(Content *c) { currentContent = c; }
+    inline void setChild(Content *c) { childContent = c; }
 
-    template <typename T>
-    T getNthElement(std::set<T, decltype(contentSort)> &s, unsigned int n);
+    fs::path getNthElement(std::set<fs::path, decltype(contentSort)> &s, unsigned int n);
     inline unsigned int getNumOfEntry(Content *content) {
         return content->dirs.size() + content->files.size();
     }
 
     private:
-    Content *parent, *current, *child;
-    fs::path path;
+    Content *parentContent, *currentContent, *childContent;
+    fs::path currentPath;
 };
 
 extern Path *path;

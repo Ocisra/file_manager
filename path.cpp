@@ -31,31 +31,31 @@ Path::Path(fs::path start_path) {
     setCurrent(new Content);
     setChild(new Content);
 
-    populateContent(getCurrent(), getPath());
-    populateContent(getParent(), getPath().parent_path());
-    populateContent(getChild(), getFileByLine(0));
+    populateContent(current(), path());
+    populateContent(parent(), path().parent_path());
+    populateContent(child(), getFileByLine(0));
 }
 
 Path::~Path() {
-    if (getParent() != nullptr)
-        delete getParent();
-    delete getCurrent();
-    delete getChild();
+    if (parent() != nullptr)
+        delete parent();
+    delete current();
+    delete child();
 }
 
 /**
  * Go up a directory
  */
 bool Path::goUp() {
-    setPath(getPath().parent_path());
+    setPath(path().parent_path());
 
-    delete getChild();
+    delete child();
 
-    setChild(getCurrent());
-    setCurrent(getParent());
-    if (getPath().string() != "/") {
+    setChild(current());
+    setCurrent(parent());
+    if (path().string() != "/") {
         setParent(new Content);
-        populateContent(getParent(), getPath().parent_path());
+        populateContent(parent(), path().parent_path());
         return true;
     } else {
         setParent(nullptr);
@@ -67,24 +67,24 @@ bool Path::goUp() {
  * Go down a directory
  */
 void Path::goDown() {
-    setPath(getFileByLine(miller->getCursorLine()));
+    setPath(getFileByLine(miller->middle()->line()));
 
-    Content *tmp = getParent();
+    Content *tmp = parent();
 
-    setParent(getCurrent());
-    setCurrent(getChild());
+    setParent(current());
+    setCurrent(child());
     setChild(new Content);
     try {
         // This line is dangerous because the function need access to the content of a
         // directory we are not sure is readable
-        populateContent(getChild(), getPath());
+        populateContent(child(), path());
         delete tmp;  // This won't cause error so I can use 'tmp' in the catch block
     } catch (const fs::filesystem_error &e) {
         log->debug(e.what());
-        setPath(getPath().parent_path());
-        delete getChild();
-        setChild(getCurrent());
-        setCurrent(getParent());
+        setPath(path().parent_path());
+        delete child();
+        setChild(current());
+        setCurrent(parent());
         setParent(tmp);
     }
 }
@@ -102,13 +102,13 @@ void Path::display(Window *win, Content *content) {
     // print directories before
     wattron(win->win, COLOR_PAIR(DIRECTORY));
     for (auto p = content->dirs.begin(); p != content->dirs.end(); p++) {
-        miller->noWrapOutput(win, p->filename().string() + "\n");
+        win->noWrapOutput(p->filename().string() + "\n");
     }
     wattroff(win->win, COLOR_PAIR(DIRECTORY));
     // print other files after
     for (auto p = content->files.begin(); p != content->files.end(); p++) {
         wattrset(win->win, COLOR_PAIR(miller->matchColor(fs::status(*p).type())));
-        miller->noWrapOutput(win, p->filename().string() + "\n");
+        win->noWrapOutput(p->filename().string() + "\n");
     }
 }
 
@@ -120,10 +120,10 @@ void Path::display(Window *win, Content *content) {
 void Path::previewChild(Window *win) {
     wclear(win->win);
 
-    delete getChild();
+    delete child();
     setChild(new Content);
     try {
-        if (fs::is_directory(getFileByLine(miller->getCursorLine()))) {
+        if (fs::is_directory(getFileByLine(miller->middle()->line()))) {
             auto setWindow = [](Window *win, int sizey, int startx, int starty) {
                 win->sizey  = sizey;
                 win->startx = startx;
@@ -132,9 +132,9 @@ void Path::previewChild(Window *win) {
                         win->sizex > win->vsizex ? win->sizex : win->vsizex);
             };
 
-            populateContent(getChild(), getFileByLine(miller->getCursorLine()));
-            setWindow(win, getChild()->numEntries, 0, 0);
-            display(win, getChild());
+            populateContent(child(), getFileByLine(miller->middle()->line()));
+            setWindow(win, child()->numEntries, 0, 0);
+            display(win, child());
         }
     } catch (const fs::filesystem_error &e) {
         log->debug(e.what());
@@ -161,10 +161,10 @@ fs::file_type Path::getFileType(Content *content, unsigned int n) {
  * Get the file at a specific line
  */
 fs::path Path::getFileByLine(unsigned int line) {
-    if (getCurrent()->dirs.size() > line)
-        return getNthElement(current->dirs, line);
+    if (current()->dirs.size() > line)
+        return getNthElement(current()->dirs, line);
     else
-        return getNthElement(current->files, line - current->dirs.size());
+        return getNthElement(current()->files, line - current()->dirs.size());
 }
 
 /**
@@ -173,9 +173,8 @@ fs::path Path::getFileByLine(unsigned int line) {
  * @param s: set to query
  * @param n: number of the element
  */
-template <typename T>
-T Path::getNthElement(std::set<T, decltype(contentSort)> &s, unsigned int n) {
-    typename std::set<T>::iterator it = s.begin();
+fs::path Path::getNthElement(std::set<fs::path, decltype(contentSort)> &s, unsigned int n) {
+    typename std::set<fs::path>::iterator it = s.begin();
     for (unsigned i = 0; i < n; i++)
         it++;
     return *it;

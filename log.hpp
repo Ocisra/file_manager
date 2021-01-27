@@ -32,7 +32,7 @@
 /// End of custom headers
 
 /// Forward declare here
-struct Window;
+class Window;
 /// End of forward declaration
 
 #include <fstream>
@@ -67,6 +67,7 @@ class Logger {
 
 
     public:
+    std::string logFilePath() { return log_file_path; }
     /**
      * Log levels :
      *
