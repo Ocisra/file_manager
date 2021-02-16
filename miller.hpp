@@ -15,6 +15,8 @@
 
 #include <ncurses.h>
 
+#include "libft-detect.hpp"
+
 // scroll is a ncurses macro so I cannot name a function scroll without
 // undefining it
 #undef scroll
@@ -31,9 +33,17 @@ enum Colors {
     SYMLINK,         SYMLINK_FG,
     BLOCK,             BLOCK_FG,
     SOCKET,           SOCKET_FG,
-    UNKNOWN,         UNKNOWN_FG
+    UNKNOWN,         UNKNOWN_FG,
+
+    REGULAR_HID,      REGULAR_HID_FG,
+    DIRECTORY_HID,  DIRECTORY_HID_FG,
+    FIFO_HID,            FIFO_HID_FG,
+    SYMLINK_HID,      SYMLINK_HID_FG,
+    BLOCK_HID,          BLOCK_HID_FG,
+    SOCKET_HID,        SOCKET_HID_FG,
 };
 // clang-format on
+#define HIDDEN_DARKENING_PERC 0.8
 
 /// Direction for movements
 enum Direction { LEFT, RIGHT, UP, DOWN };
@@ -49,7 +59,7 @@ class Window {
     /// Set attributes on a whole line
     inline void attr_line(attr_t attr, short colorPair) {
         wchgat(win, -1, attr, colorPair, NULL);
-        prefresh(win, starty, startx, posy, posx, vsizey, vsizex);
+        prefresh(win, starty, startx, posy, posx, vsizey + posy, vsizex + posx);
     }
     inline void attr_line(short colorPair) { attr_line(A_NORMAL, colorPair); }
 
@@ -74,7 +84,7 @@ class Miller {
     void draw();
     void resizeTerm();
     void move(Direction direction);
-    Colors matchColor(fs::file_type ft);
+    Colors matchColor(lft::filetype *ft);
     Colors getFileColor();
 
     /// Get the corresponding window
@@ -90,7 +100,7 @@ class Miller {
     }
     inline bool isAtTopOfEntries() { return middle()->line() == 0; }
     inline bool isAtBottomOfEntries() {
-        return middle()->line() == path()->current()->numEntries - 1;
+        return middle()->line() == path()->getNumOfEntry(path()->current()) - 1;
     }
     inline unsigned int wantedScrolloff() { return wantsScrolloff; }
     inline void setWantedScrolloff(unsigned int so) { wantsScrolloff = so; }

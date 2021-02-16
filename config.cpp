@@ -8,8 +8,9 @@
 
 
 Config *config;
+lft *ft_finder;
 
-void parseConfigFile(fs::path configFile, Config *config) {}
+void parseConfigFile(fs::path /*configFile*/, Config * /*config*/) {}
 
 void parseCommandLine(int argc, char *argv[], Config *config) {
     // argv[0] is the executable

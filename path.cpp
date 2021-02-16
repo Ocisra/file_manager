@@ -1,11 +1,14 @@
 #include "path.hpp"
 
+#include "config.hpp"
 #include "miller.hpp"
 
 #include <filesystem>
 #include <set>
 
 #include <ncurses.h>
+
+#include "libft-detect.hpp"
 
 
 /**
@@ -16,24 +19,27 @@
  */
 static void populateContent(Content *content, const fs::path &path) {
     for (auto &p : fs::directory_iterator(path)) {
-        if (p.is_directory())
-            content->dirs.emplace(p.path());
-        else
-            content->files.emplace(p.path());
+        content->entries.emplace(p.path());
     }
-    content->numEntries = content->dirs.size() + content->files.size();
 }
 
 Path::Path(fs::path start_path) {
-    setPath(start_path);
+    if (start_path.string().ends_with('/') && start_path.string() != "/")
+        setPath(start_path.parent_path());
+    else
+        setPath(start_path);
 
-    setParent(new Content);
     setCurrent(new Content);
     setChild(new Content);
 
     populateContent(current(), path());
-    populateContent(parent(), path().parent_path());
     populateContent(child(), getFileByLine(0));
+
+    if (path().string() != "/") {
+        setParent(new Content);
+        populateContent(parent(), path().parent_path());
+    } else
+        setParent(nullptr);
 }
 
 Path::~Path() {
@@ -99,15 +105,8 @@ void Path::display(Window *win, Content *content) {
     if (content == nullptr) {
         return;
     }
-    // print directories before
-    wattron(win->win, COLOR_PAIR(DIRECTORY));
-    for (auto p = content->dirs.begin(); p != content->dirs.end(); p++) {
-        win->noWrapOutput(p->filename().string() + "\n");
-    }
-    wattroff(win->win, COLOR_PAIR(DIRECTORY));
-    // print other files after
-    for (auto p = content->files.begin(); p != content->files.end(); p++) {
-        wattrset(win->win, COLOR_PAIR(miller->matchColor(fs::status(*p).type())));
+    for (auto p = content->entries.begin(); p != content->entries.end(); p++) {
+        wattrset(win->win, COLOR_PAIR(miller->matchColor(ft_finder->getFiletype(p->string()))));
         win->noWrapOutput(p->filename().string() + "\n");
     }
 }
@@ -133,7 +132,7 @@ void Path::previewChild(Window *win) {
             };
 
             populateContent(child(), getFileByLine(miller->middle()->line()));
-            setWindow(win, child()->numEntries, 0, 0);
+            setWindow(win, getNumOfEntry(child()), 0, 0);
             display(win, child());
         }
     } catch (const fs::filesystem_error &e) {
@@ -144,27 +143,22 @@ void Path::previewChild(Window *win) {
 }
 
 /**
+ * TODO
+ *
  * Get the filetype of the Nth element
  *
  * @param content: content in which to search
  * @param n: element of which to find the filetype
  */
-fs::file_type Path::getFileType(Content *content, unsigned int n) {
-    if (n < content->dirs.size())
-        return fs::file_type::directory;
-    n -= content->dirs.size();
-
-    return fs::status(getNthElement(content->files, n)).type();
+lft::filetype *Path::getFileType(Content *content, unsigned int n) {
+    return ft_finder->getFiletype(getNthElement(content->entries, n));
 }
 
 /**
  * Get the file at a specific line
  */
 fs::path Path::getFileByLine(unsigned int line) {
-    if (current()->dirs.size() > line)
-        return getNthElement(current()->dirs, line);
-    else
-        return getNthElement(current()->files, line - current()->dirs.size());
+    return getNthElement(current()->entries, line);
 }
 
 /**

@@ -2,6 +2,7 @@
 #define CONFIG_HPP
 
 #include <filesystem>
+#include "libft-detect.hpp"
 
 namespace fs = std::filesystem;
 
@@ -13,4 +14,5 @@ struct Config {
 Config *getConfig(int argc, char *argv[]);
 
 extern Config *config;
+extern lft *ft_finder;
 #endif  // CONFIG_HPP

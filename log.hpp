@@ -39,7 +39,7 @@ class Window;
 #include <string>
 
 
-class Logger {
+class Logger {  
     private:
     /**
      * Log functions declarations.

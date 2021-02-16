@@ -4,6 +4,7 @@
 #ifndef PATH_HPP
 #define PATH_HPP
 
+#include "config.hpp"
 #include "log.hpp"
 
 #include <cctype>
@@ -13,6 +14,8 @@
 
 #include <ncurses.h>
 
+#include "libft-detect.hpp"
+
 /// Maximum number of entries in a directory to take into account
 #define MAX_LINES 10000
 
@@ -21,9 +24,15 @@ namespace fs = std::filesystem;
 
 /**
  * Custom sort function.
- * It is not case sensible and handle numbers as expected (lower go first, not shorter)
+ * It is not case sensible and handle numbers as expected (lower go first)
  */
 static auto contentSort = [](fs::path a, fs::path b) {
+    lft::generalFT af = ft_finder->getFiletype(a)->general;
+    lft::generalFT bf = ft_finder->getFiletype(b)->general;
+    if (af == lft::directory && bf != lft::directory)
+        return true;
+    if (af != lft::directory && bf == lft::directory) // only for the first entry 
+        return false;
     std::string as = a.filename();
     std::string bs = b.filename();
 
@@ -55,11 +64,7 @@ static auto contentSort = [](fs::path a, fs::path b) {
  * Uses `std::set` to automatically sort the entries alphabetically
  */
 struct Content {
-    // Directories are treated separately to be placed on top
-    std::set<fs::path, decltype(contentSort)> dirs;
-    // 'files' contains everything else
-    std::set<fs::path, decltype(contentSort)> files;
-    unsigned int numEntries = 0;
+    std::set<fs::path, decltype(contentSort)> entries;
 };
 
 class Window;  // in miller.hpp
@@ -76,7 +81,7 @@ class Path {
     void display(Window *win, Content *content);
     void previewChild(Window *win);
     fs::path getFileByLine(unsigned int line);
-    fs::file_type getFileType(Content *content, unsigned int n);
+    lft::filetype *getFileType(Content *content, unsigned int n);
     inline fs::path path() { return currentPath; }
     inline void setPath(fs::path p) { currentPath = p; }
 
@@ -91,7 +96,7 @@ class Path {
 
     fs::path getNthElement(std::set<fs::path, decltype(contentSort)> &s, unsigned int n);
     inline unsigned int getNumOfEntry(Content *content) {
-        return content->dirs.size() + content->files.size();
+        return content->entries.size();
     }
 
     private:

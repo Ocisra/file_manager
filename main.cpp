@@ -2,6 +2,7 @@
 #include "log.hpp"
 #include "miller.hpp"
 #include "path.hpp"
+#include "libft-detect.hpp"
 
 #include <csignal>
 #include <cstdlib>
@@ -16,6 +17,7 @@
 
 /// Test config ///////////
 #define SCROLLOFF 3
+#define MIME_TYPES_PATH "/usr/share/mime/globs"
 /// ///////////////////////
 
 /**
@@ -45,21 +47,33 @@ void init_colors() {
 
     init_color(REGULAR_FG, 900, 900, 900);
     init_pair(REGULAR, REGULAR_FG, -1);
+    init_color(REGULAR_HID_FG, 900*HIDDEN_DARKENING_PERC, 900*HIDDEN_DARKENING_PERC, 900*HIDDEN_DARKENING_PERC);
+    init_pair(REGULAR_HID, REGULAR_HID_FG, -1);
 
     init_color(DIRECTORY_FG, 866, 733, 133);
     init_pair(DIRECTORY, DIRECTORY_FG, -1);
+    init_color(DIRECTORY_HID_FG, 866*HIDDEN_DARKENING_PERC, 733*HIDDEN_DARKENING_PERC, 133*HIDDEN_DARKENING_PERC);
+    init_pair(DIRECTORY_HID, DIRECTORY_HID_FG, -1);
 
     init_color(FIFO_FG, 133, 733, 866);
     init_pair(FIFO, FIFO_FG, -1);
+    init_color(FIFO_HID_FG, 133*HIDDEN_DARKENING_PERC, 733*HIDDEN_DARKENING_PERC, 866*HIDDEN_DARKENING_PERC);
+    init_pair(FIFO_HID, FIFO_FG, -1);
 
     init_color(SYMLINK_FG, 266, 800, 133);
     init_pair(SYMLINK, SYMLINK_FG, -1);
+    init_color(SYMLINK_HID_FG, 133*HIDDEN_DARKENING_PERC, 800*HIDDEN_DARKENING_PERC, 133*HIDDEN_DARKENING_PERC);
+    init_pair(SYMLINK_HID, SYMLINK_HID_FG, -1);
 
     init_color(BLOCK_FG, 600, 266, 66);
     init_pair(BLOCK, BLOCK_FG, -1);
+    init_color(BLOCK_HID_FG, 600*HIDDEN_DARKENING_PERC, 266*HIDDEN_DARKENING_PERC, 66*HIDDEN_DARKENING_PERC);
+    init_pair(BLOCK_HID, BLOCK_HID_FG, -1);
 
     init_color(SOCKET_FG, 733, 133, 866);
     init_pair(SOCKET, SOCKET_FG, -1);
+    init_color(SOCKET_HID_FG, 733*HIDDEN_DARKENING_PERC, 133*HIDDEN_DARKENING_PERC, 866*HIDDEN_DARKENING_PERC);
+    init_pair(SOCKET_HID, SOCKET_HID_FG, -1);
 
     init_color(UNKNOWN_FG, 700, 700, 700);
     init_pair(UNKNOWN, UNKNOWN_FG, -1);
@@ -83,6 +97,7 @@ int main(int argc, char *argv[]) {
     log->info("Starting with " + std::to_string(argc) + " arguments");
 
     config = getConfig(argc, argv);
+    ft_finder = new lft(MIME_TYPES_PATH);
 
     initscr();
     start_color();

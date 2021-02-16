@@ -1,6 +1,6 @@
 CC = clang++
-LDFLAGS = -lncurses
-COMPILE_FLAGS = -std=c++20 -MMD -MP
+LDFLAGS = -lncurses -Llibs -lft-detect
+COMPILE_FLAGS = -std=c++20 -MMD -MP -Ilibs
 DEBUG_FLAGS = -g -Wall -Wextra -pedantic
 FLAGS = $(COMPILE_FLAGS) $(DEBUG_FLAGS)
 

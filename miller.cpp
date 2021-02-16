@@ -1,5 +1,6 @@
 #include "miller.hpp"
 
+#include "config.hpp"
 #include "log.hpp"
 #include "path.hpp"
 
@@ -66,11 +67,11 @@ Miller::Miller(unsigned int scrolloff, fs::path start_path) {
 
     // clang-format off
     // Create the 3 panels
-    setWindow(left(), maxx / 8, path()->parent()->numEntries, 0, 0,
+    setWindow(left(), maxx / 8, path()->parent() == nullptr ? 1 : path()->getNumOfEntry(path()->parent()), 0, 0,
               0, 0 + 1 /*top bar*/, maxx / 8 - 1, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
-    setWindow(middle(), 3 * maxx / 8, path()->current()->numEntries, 0, 0, maxx / 8,
+    setWindow(middle(), 3 * maxx / 8, path()->getNumOfEntry(path()->current()), 0, 0, maxx / 8,
               0 + 1 /*top bar*/, 3 * maxx / 8 - 1, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
-    setWindow(right(), maxx / 2, path()->child()->numEntries, 0, 0, maxx / 2,
+    setWindow(right(), maxx / 2, path()->getNumOfEntry(path()->child()), 0, 0, maxx / 2,
               0 + 1 /*top bar*/, maxx / 2, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
     // clang-format on
 
@@ -104,22 +105,40 @@ Miller::~Miller() {
     delete path();
 }
 
-Colors Miller::matchColor(fs::file_type ft) {
-    switch (ft) {
-    case fs::file_type::directory: return DIRECTORY;
-    case fs::file_type::regular: return REGULAR;
-    case fs::file_type::character:
-    case fs::file_type::block: return BLOCK;
-    case fs::file_type::fifo: return FIFO;
-    case fs::file_type::socket: return SOCKET;
-    case fs::file_type::symlink: return SYMLINK;
+/**
+ * Get the color that should be applied depending on the filetype
+ */
+Colors Miller::matchColor(lft::filetype *ft) {
+    switch (ft->general) {
+#define COLOR(base_color)        \
+    if (ft->isHidden())          \
+        return base_color##_HID; \
+    else                         \
+        return base_color;
+    case lft::directory: COLOR(DIRECTORY)
+    case lft::unknown:
+    case lft::audio:
+    case lft::video:
+    case lft::font:
+    case lft::model:
+    case lft::text:
+    case lft::image: COLOR(REGULAR)
+    case lft::character:
+    case lft::block: COLOR(BLOCK)
+    case lft::fifo: COLOR(FIFO)
+    case lft::socket: COLOR(SOCKET)
+    case lft::symlink: COLOR(SYMLINK)
     default: return UNKNOWN;
     }
+#undef COLOR
 }
 
+/**
+ * Get the color off the currently selected file
+ */
 Colors Miller::getFileColor() {
-    fs::file_type type = path()->getFileType(path()->current(), middle()->line());
-    return matchColor(type);
+    lft::filetype *ft = path()->getFileType(path()->current(), middle()->line());
+    return matchColor(ft);
 }
 
 
@@ -129,6 +148,8 @@ Colors Miller::getFileColor() {
  * content of the windows
  */
 void Miller::draw() {
+    wclear(stdscr);
+    wrefresh(stdscr);
     wclear(left()->win);
     wclear(middle()->win);
     wclear(right()->win);
@@ -238,7 +259,8 @@ void Miller::move(Direction direction) {
 
         middle()->attr_line(getFileColor());  // remove highlighting on 'old' line
 
-        if (isAtBottomOfWindow() && middle()->line() + scrolloff() < path()->current()->numEntries - 1)
+        if (isAtBottomOfWindow()
+            && middle()->line() + scrolloff() < path()->getNumOfEntry(path()->current()) - 1)
             middle()->scroll(DOWN);
 
         middle()->setLine(middle()->line() + 1);
@@ -263,9 +285,9 @@ void Miller::move(Direction direction) {
         path()->previewChild(right());
 
         // resize the pad
-        setWindow(left(), path()->parent() == nullptr ? 1 : path()->parent()->numEntries, 0, 0);
-        setWindow(middle(), path()->current()->numEntries, 0, 0);
-        setWindow(right(), path()->child()->numEntries, 0, 0);
+        setWindow(left(), path()->parent() == nullptr ? 1 : path()->getNumOfEntry(path()->parent()), 0, 0);
+        setWindow(middle(), path()->getNumOfEntry(path()->current()), 0, 0);
+        setWindow(right(), path()->getNumOfEntry(path()->child()), 0, 0);
 
         draw();
     } break;
@@ -282,9 +304,9 @@ void Miller::move(Direction direction) {
         path()->previewChild(right());
 
         // resize the pad
-        setWindow(left(), path()->parent()->numEntries, 0, 0);
-        setWindow(middle(), path()->current()->numEntries, 0, 0);
-        setWindow(right(), path()->child()->numEntries, 0, 0);
+        setWindow(left(), path()->getNumOfEntry(path()->parent()), 0, 0);
+        setWindow(middle(), path()->getNumOfEntry(path()->current()), 0, 0);
+        setWindow(right(), path()->getNumOfEntry(path()->child()), 0, 0);
 
         draw();
     } break;
