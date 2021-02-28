@@ -43,7 +43,7 @@ enum Colors {
     SOCKET_HID,        SOCKET_HID_FG,
 };
 // clang-format on
-#define HIDDEN_DARKENING_PERC 0.8
+#define HIDDEN_DARKENING_PERC 0.6
 
 /// Direction for movements
 enum Direction { LEFT, RIGHT, UP, DOWN };

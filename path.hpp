@@ -22,19 +22,26 @@
 namespace fs = std::filesystem;
 
 
+struct Entry {
+    fs::path path;
+    bool isHidden;
+    lft::filetype *filetype;
+    bool isDisplayed = false;
+};
+
 /**
  * Custom sort function.
  * It is not case sensible and handle numbers as expected (lower go first)
  */
-static auto contentSort = [](fs::path a, fs::path b) {
-    lft::generalFT af = ft_finder->getFiletype(a)->general;
-    lft::generalFT bf = ft_finder->getFiletype(b)->general;
+static auto contentSort = [](Entry *a, Entry *b) {
+    lft::generalFT af = ft_finder->getFiletype(a->path)->general;
+    lft::generalFT bf = ft_finder->getFiletype(b->path)->general;
     if (af == lft::directory && bf != lft::directory)
         return true;
     if (af != lft::directory && bf == lft::directory) // only for the first entry 
         return false;
-    std::string as = a.filename();
-    std::string bs = b.filename();
+    std::string as = a->path.filename();
+    std::string bs = b->path.filename();
 
     // Sort string filename
     for (auto &c : as)
@@ -59,12 +66,13 @@ static auto contentSort = [](fs::path a, fs::path b) {
     return as < bs;
 };
 
+
 /**
  * The content of a director.
  * Uses `std::set` to automatically sort the entries alphabetically
  */
 struct Content {
-    std::set<fs::path, decltype(contentSort)> entries;
+    std::set<Entry*, decltype(contentSort)> entries;
 };
 
 class Window;  // in miller.hpp
@@ -80,7 +88,7 @@ class Path {
     void goDown();
     void display(Window *win, Content *content);
     void previewChild(Window *win);
-    fs::path getFileByLine(unsigned int line);
+    Entry *getFileByLine(unsigned int line);
     lft::filetype *getFileType(Content *content, unsigned int n);
     inline fs::path path() { return currentPath; }
     inline void setPath(fs::path p) { currentPath = p; }
@@ -94,7 +102,7 @@ class Path {
     inline void setCurrent(Content *c) { currentContent = c; }
     inline void setChild(Content *c) { childContent = c; }
 
-    fs::path getNthElement(std::set<fs::path, decltype(contentSort)> &s, unsigned int n);
+    Entry *getNthElement(std::set<Entry*, decltype(contentSort)> &s, unsigned int n);
     inline unsigned int getNumOfEntry(Content *content) {
         return content->entries.size();
     }

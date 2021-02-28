@@ -292,7 +292,7 @@ void Miller::move(Direction direction) {
         draw();
     } break;
     case RIGHT: {
-        if (!fs::is_directory(path()->getFileByLine(middle()->line())))
+        if (!fs::is_directory(path()->getFileByLine(middle()->line())->path))
             break;
 
         wclear(stdscr);
