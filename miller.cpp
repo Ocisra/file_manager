@@ -159,7 +159,7 @@ void Miller::draw() {
     // box(middle()->win, 0, 0);
     // box(right()->win, 0, 0);
 
-    middle()->setLine(0);
+    //middle()->setLine(0);
 
     path()->display(left(), path()->parent());
     path()->display(middle(), path()->current());
@@ -172,7 +172,7 @@ void Miller::draw() {
     prefresh(right()->win, right()->starty, right()->startx, right()->posy, right()->posx,
              right()->vsizey + right()->posy, right()->vsizex + right()->posx);
 
-    wmove(middle()->win, 0, 0);
+    wmove(middle()->win, middle()->line(), 0);
     middle()->attr_line(SELECTED);
 }
 
@@ -275,14 +275,10 @@ void Miller::move(Direction direction) {
         if (path()->path().string() == "/") {
             break;
         }
+        path()->getFileByLine(0);
 
-        wclear(stdscr);
-        wrefresh(stdscr);
-
+        middle()->setLine(path()->find(path()->parent(), path()->path()));
         path()->goUp();
-        middle()->setLine(0);
-
-        path()->previewChild(right());
 
         // resize the pad
         setWindow(left(), path()->parent() == nullptr ? 1 : path()->getNumOfEntry(path()->parent()), 0, 0);
@@ -294,11 +290,12 @@ void Miller::move(Direction direction) {
     case RIGHT: {
         if (!fs::is_directory(path()->getFileByLine(middle()->line())->path))
             break;
-
+        
         wclear(stdscr);
         wrefresh(stdscr);
 
         path()->goDown();
+
         middle()->setLine(0);
 
         path()->previewChild(right());

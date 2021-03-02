@@ -27,6 +27,7 @@ struct Entry {
     bool isHidden;
     lft::filetype *filetype;
     bool isDisplayed = false;
+    ~Entry();
 };
 
 /**
@@ -36,10 +37,16 @@ struct Entry {
 static auto contentSort = [](Entry *a, Entry *b) {
     lft::generalFT af = ft_finder->getFiletype(a->path)->general;
     lft::generalFT bf = ft_finder->getFiletype(b->path)->general;
-    if (af == lft::directory && bf != lft::directory)
-        return true;
-    if (af != lft::directory && bf == lft::directory) // only for the first entry 
-        return false;
+
+    if (af != bf) {
+        for (auto &ft : config->filetype_order) {
+            if (af == ft)
+                return true;
+            if (bf == ft)
+                return false;
+        }
+    }
+
     std::string as = a->path.filename();
     std::string bs = b->path.filename();
 
@@ -73,6 +80,7 @@ static auto contentSort = [](Entry *a, Entry *b) {
  */
 struct Content {
     std::set<Entry*, decltype(contentSort)> entries;
+    ~Content();
 };
 
 class Window;  // in miller.hpp
@@ -90,6 +98,8 @@ class Path {
     void previewChild(Window *win);
     Entry *getFileByLine(unsigned int line);
     lft::filetype *getFileType(Content *content, unsigned int n);
+    int find(Content *content, fs::path p);
+
     inline fs::path path() { return currentPath; }
     inline void setPath(fs::path p) { currentPath = p; }
 
@@ -102,7 +112,6 @@ class Path {
     inline void setCurrent(Content *c) { currentContent = c; }
     inline void setChild(Content *c) { childContent = c; }
 
-    Entry *getNthElement(std::set<Entry*, decltype(contentSort)> &s, unsigned int n);
     inline unsigned int getNumOfEntry(Content *content) {
         return content->entries.size();
     }
@@ -110,6 +119,9 @@ class Path {
     private:
     Content *parentContent, *currentContent, *childContent;
     fs::path currentPath;
+
+    Entry *getNthElement(std::set<Entry*, decltype(contentSort)> &s, unsigned int n);
+    int getIndex(std::set<Entry*, decltype(contentSort)> &s, fs::path p);
 };
 
 extern Path *path;

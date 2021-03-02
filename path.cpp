@@ -27,6 +27,16 @@ static void populateContent(Content *content, const fs::path &path) {
     }
 }
 
+Entry::~Entry() {
+    delete filetype; 
+}
+
+Content::~Content () {
+    for (auto &e : entries) {
+        delete e;
+    }
+}
+
 Path::Path(fs::path start_path) {
     if (start_path.string().ends_with('/') && start_path.string() != "/")
         setPath(start_path.parent_path());
@@ -88,7 +98,7 @@ void Path::goDown() {
         // This line is dangerous because the function need access to the content of a
         // directory we are not sure is readable
         populateContent(child(), path());
-        delete tmp;  // This won't cause error so I can use 'tmp' in the catch block
+        delete tmp;
     } catch (const fs::filesystem_error &e) {
         log->debug(e.what());
         setPath(path().parent_path());
@@ -109,21 +119,9 @@ void Path::display(Window *win, Content *content) {
     if (content == nullptr) {
         return;
     }
-    for (auto &ft : config->filetype_order) {
-        for (auto p = content->entries.begin(); p != content->entries.end(); p++) {
-            if ((*p)->filetype->general == ft) {
-                wattrset(win->win, COLOR_PAIR(miller->matchColor((*p)->filetype)));
-                win->noWrapOutput((*p)->path.filename().string() + "\n");
-                (*p)->isDisplayed = true;
-            }
-        }
-    }
     for (auto p = content->entries.begin(); p != content->entries.end(); p++) {
-        if (!(*p)->isDisplayed) {
             wattrset(win->win, COLOR_PAIR(miller->matchColor((*p)->filetype)));
             win->noWrapOutput((*p)->path.filename().string() + "\n");
-            (*p)->isDisplayed = true;
-        }
     }
 }
 
@@ -176,6 +174,13 @@ Entry *Path::getFileByLine(unsigned int line) {
 }
 
 /**
+ * Find the index of the specified path
+ */
+int Path::find(Content *content, fs::path p) {
+    return getIndex(content->entries, p);
+}
+
+/**
  * Get the Nth element of a set
  *
  * @param s: set to query
@@ -186,4 +191,20 @@ Entry *Path::getNthElement(std::set<Entry *, decltype(contentSort)> &s, unsigned
     for (unsigned i = 0; i < n; i++)
         it++;
     return *it;
+}
+
+/**
+ * Get the index of an element
+ *
+ * @param s: set to query
+ * @param p: element to find
+ */
+int Path::getIndex(std::set<Entry *, decltype(contentSort)> &s, fs::path p) {
+    int c = 0;
+    for (auto &e : s) {
+        if (e->path == p)
+            return c;
+        c++;
+    }
+    return -1;
 }
