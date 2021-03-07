@@ -18,20 +18,60 @@
  * @param path: path tracked by the content
  */
 static void populateContent(Content *content, const fs::path &path) {
+    if (fs::is_empty(path)) {
+        content->addVirtual("empty");
+        return;
+    }
     for (auto &p : fs::directory_iterator(path)) {
         Entry *entry    = new Entry;
         entry->path     = p.path();
         entry->filetype = ft_finder->getFiletype(p.path());
-        // entry->isHidden = TODO
         content->entries.emplace(entry);
     }
 }
 
 Entry::~Entry() {
-    delete filetype; 
+    delete filetype;
 }
 
-Content::~Content () {
+void Content::addVirtual(std::string text) {
+    Entry *entry     = new Entry;
+    entry->filetype  = nullptr;
+    entry->isVirtual = true;
+    entry->path      = text;
+    entries.emplace(entry);
+}
+
+/**
+ * Get the filetype of the Nth element
+ *
+ * @param n: element of which to find the filetype
+ */
+lft::filetype *Content::getFileType(unsigned int n) {
+    return ft_finder->getFiletype(getNthElement(entries, n)->path);
+}
+
+/**
+ * Get the file at a specific line
+ */
+Entry *Content::getFileByLine(unsigned int line) {
+    return getNthElement(entries, line);
+}
+
+/**
+ * Get the Nth element of a set
+ *
+ * @param s: set to query
+ * @param n: number of the element
+ */
+Entry *Content::getNthElement(std::set<Entry *, decltype(contentSort)> &s, unsigned int n) {
+    typename std::set<Entry *>::iterator it = s.begin();
+    for (unsigned i = 0; i < n; i++)
+        it++;
+    return *it;
+}
+
+Content::~Content() {
     for (auto &e : entries) {
         delete e;
     }
@@ -47,7 +87,7 @@ Path::Path(fs::path start_path) {
     setChild(new Content);
 
     populateContent(current(), path());
-    populateContent(child(), getFileByLine(0)->path);
+    populateContent(child(), current()->getFileByLine(0)->path);
 
     if (path().string() != "/") {
         setParent(new Content);
@@ -87,7 +127,7 @@ bool Path::goUp() {
  * Go down a directory
  */
 void Path::goDown() {
-    setPath(getFileByLine(miller->middle()->line())->path);
+    setPath(current()->getFileByLine(miller->middle()->line())->path);
 
     Content *tmp = parent();
 
@@ -96,7 +136,7 @@ void Path::goDown() {
     setChild(new Content);
     try {
         // This line is dangerous because the function need access to the content of a
-        // directory we are not sure is readable
+        // directory we are not sure exists or is readable
         populateContent(child(), path());
         delete tmp;
     } catch (const fs::filesystem_error &e) {
@@ -120,8 +160,8 @@ void Path::display(Window *win, Content *content) {
         return;
     }
     for (auto p = content->entries.begin(); p != content->entries.end(); p++) {
-            wattrset(win->win, COLOR_PAIR(miller->matchColor((*p)->filetype)));
-            win->noWrapOutput((*p)->path.filename().string() + "\n");
+        wattrset(win->win, COLOR_PAIR(miller->getFileColor(*p)));
+        win->noWrapOutput((*p)->path.filename().string() + "\n");
     }
 }
 
@@ -135,62 +175,31 @@ void Path::previewChild(Window *win) {
 
     delete child();
     setChild(new Content);
+    auto setWindow = [](Window *win, int sizey, int startx, int starty) {
+        win->sizey  = sizey;
+        win->startx = startx;
+        win->starty = starty;
+        wresize(win->win, win->sizey > win->vsizey ? win->sizey : win->vsizey + 1,
+                win->sizex > win->vsizex ? win->sizex : win->vsizex);
+    };
     try {
-        if (fs::is_directory(getFileByLine(miller->middle()->line())->path)) {
-            auto setWindow = [](Window *win, int sizey, int startx, int starty) {
-                win->sizey  = sizey;
-                win->startx = startx;
-                win->starty = starty;
-                wresize(win->win, win->sizey > win->vsizey ? win->sizey : win->vsizey + 1,
-                        win->sizex > win->vsizex ? win->sizex : win->vsizex);
-            };
-
-            populateContent(child(), getFileByLine(miller->middle()->line())->path);
-            setWindow(win, getNumOfEntry(child()), 0, 0);
-            display(win, child());
+        if (fs::is_directory(current()->getFileByLine(miller->middle()->line())->path)) {
+            populateContent(child(), current()->getFileByLine(miller->middle()->line())->path);
         }
     } catch (const fs::filesystem_error &e) {
+        child()->addVirtual("not accessible");
         log->debug(e.what());
     }
+    setWindow(win, child()->numOfEntries(), 0, 0);
+    display(win, child());
     prefresh(win->win, win->starty, win->startx, win->posy, win->posx,
              win->vsizey + win->posy, win->vsizex + win->posx);
 }
-
-/**
- * Get the filetype of the Nth element
- *
- * @param content: content in which to search
- * @param n: element of which to find the filetype
- */
-lft::filetype *Path::getFileType(Content *content, unsigned int n) {
-    return ft_finder->getFiletype(getNthElement(content->entries, n)->path);
-}
-
-/**
- * Get the file at a specific line
- */
-Entry *Path::getFileByLine(unsigned int line) {
-    return getNthElement(current()->entries, line);
-}
-
 /**
  * Find the index of the specified path
  */
 int Path::find(Content *content, fs::path p) {
     return getIndex(content->entries, p);
-}
-
-/**
- * Get the Nth element of a set
- *
- * @param s: set to query
- * @param n: number of the element
- */
-Entry *Path::getNthElement(std::set<Entry *, decltype(contentSort)> &s, unsigned int n) {
-    typename std::set<Entry *>::iterator it = s.begin();
-    for (unsigned i = 0; i < n; i++)
-        it++;
-    return *it;
 }
 
 /**

@@ -77,7 +77,10 @@ void init_colors() {
 
     init_color(UNKNOWN_FG, 700, 700, 700);
     init_pair(UNKNOWN, UNKNOWN_FG, -1);
-#undef BG_COLOR
+
+    init_color(VIRTUAL_BG, 800, 66, 66);
+    init_color(VIRTUAL_FG, 66, 800, 800);
+    init_pair(VIRTUAL, VIRTUAL_FG, VIRTUAL_BG);
 }
 
 

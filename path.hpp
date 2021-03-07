@@ -24,9 +24,9 @@ namespace fs = std::filesystem;
 
 struct Entry {
     fs::path path;
-    bool isHidden;
     lft::filetype *filetype;
     bool isDisplayed = false;
+    bool isVirtual   = false;
     ~Entry();
 };
 
@@ -78,9 +78,17 @@ static auto contentSort = [](Entry *a, Entry *b) {
  * The content of a director.
  * Uses `std::set` to automatically sort the entries alphabetically
  */
-struct Content {
-    std::set<Entry*, decltype(contentSort)> entries;
+class Content {
+    public:
+    std::set<Entry *, decltype(contentSort)> entries;
+    inline unsigned int numOfEntries() { return entries.size(); }
+    void addVirtual(std::string text);
+    lft::filetype *getFileType(unsigned int n);
+    Entry *getFileByLine(unsigned int line);
     ~Content();
+
+    private:
+    Entry *getNthElement(std::set<Entry *, decltype(contentSort)> &s, unsigned int n);
 };
 
 class Window;  // in miller.hpp
@@ -96,8 +104,6 @@ class Path {
     void goDown();
     void display(Window *win, Content *content);
     void previewChild(Window *win);
-    Entry *getFileByLine(unsigned int line);
-    lft::filetype *getFileType(Content *content, unsigned int n);
     int find(Content *content, fs::path p);
 
     inline fs::path path() { return currentPath; }
@@ -112,16 +118,12 @@ class Path {
     inline void setCurrent(Content *c) { currentContent = c; }
     inline void setChild(Content *c) { childContent = c; }
 
-    inline unsigned int getNumOfEntry(Content *content) {
-        return content->entries.size();
-    }
 
     private:
     Content *parentContent, *currentContent, *childContent;
     fs::path currentPath;
 
-    Entry *getNthElement(std::set<Entry*, decltype(contentSort)> &s, unsigned int n);
-    int getIndex(std::set<Entry*, decltype(contentSort)> &s, fs::path p);
+    int getIndex(std::set<Entry *, decltype(contentSort)> &s, fs::path p);
 };
 
 extern Path *path;

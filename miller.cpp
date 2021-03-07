@@ -67,11 +67,11 @@ Miller::Miller(unsigned int scrolloff, fs::path start_path) {
 
     // clang-format off
     // Create the 3 panels
-    setWindow(left(), maxx / 8, path()->parent() == nullptr ? 1 : path()->getNumOfEntry(path()->parent()), 0, 0,
+    setWindow(left(), maxx / 8, path()->parent() == nullptr ? 1 : path()->parent()->numOfEntries(), 0, 0,
               0, 0 + 1 /*top bar*/, maxx / 8 - 1, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
-    setWindow(middle(), 3 * maxx / 8, path()->getNumOfEntry(path()->current()), 0, 0, maxx / 8,
+    setWindow(middle(), 3 * maxx / 8, path()->current()->numOfEntries(), 0, 0, maxx / 8,
               0 + 1 /*top bar*/, 3 * maxx / 8 - 1, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
-    setWindow(right(), maxx / 2, path()->getNumOfEntry(path()->child()), 0, 0, maxx / 2,
+    setWindow(right(), maxx / 2, path()->child()->numOfEntries(), 0, 0, maxx / 2,
               0 + 1 /*top bar*/, maxx / 2, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
     // clang-format on
 
@@ -134,11 +134,20 @@ Colors Miller::matchColor(lft::filetype *ft) {
 }
 
 /**
- * Get the color off the currently selected file
+ * Get the color of a file
  */
-Colors Miller::getFileColor() {
-    lft::filetype *ft = path()->getFileType(path()->current(), middle()->line());
+Colors Miller::getFileColor(Entry *entry) {
+    if (entry->isVirtual)
+        return VIRTUAL;    
+    lft::filetype *ft = ft_finder->getFiletype(entry->path);
     return matchColor(ft);
+}
+
+/**
+ * Get the color of the currently selected file
+ */
+Colors Miller::getCurrentFileColor() {
+    return getFileColor(path()->current()->getFileByLine(middle()->line()));
 }
 
 
@@ -159,7 +168,7 @@ void Miller::draw() {
     // box(middle()->win, 0, 0);
     // box(right()->win, 0, 0);
 
-    //middle()->setLine(0);
+    // middle()->setLine(0);
 
     path()->display(left(), path()->parent());
     path()->display(middle(), path()->current());
@@ -240,7 +249,7 @@ void Miller::move(Direction direction) {
         if (isAtTopOfEntries())
             break;
 
-        middle()->attr_line(getFileColor());  // remove highlighting on 'old' line
+        middle()->attr_line(getCurrentFileColor());  // remove highlighting on 'old' line
 
         if (isAtTopOfWindow() && middle()->line() > scrolloff())
             middle()->scroll(UP);
@@ -257,10 +266,10 @@ void Miller::move(Direction direction) {
         if (isAtBottomOfEntries())
             break;
 
-        middle()->attr_line(getFileColor());  // remove highlighting on 'old' line
+        middle()->attr_line(getCurrentFileColor());  // remove highlighting on 'old' line
 
         if (isAtBottomOfWindow()
-            && middle()->line() + scrolloff() < path()->getNumOfEntry(path()->current()) - 1)
+            && middle()->line() + scrolloff() < path()->current()->numOfEntries() - 1)
             middle()->scroll(DOWN);
 
         middle()->setLine(middle()->line() + 1);
@@ -275,22 +284,23 @@ void Miller::move(Direction direction) {
         if (path()->path().string() == "/") {
             break;
         }
-        path()->getFileByLine(0);
+        path()->current()->getFileByLine(0);
 
         middle()->setLine(path()->find(path()->parent(), path()->path()));
         path()->goUp();
 
         // resize the pad
-        setWindow(left(), path()->parent() == nullptr ? 1 : path()->getNumOfEntry(path()->parent()), 0, 0);
-        setWindow(middle(), path()->getNumOfEntry(path()->current()), 0, 0);
-        setWindow(right(), path()->getNumOfEntry(path()->child()), 0, 0);
+        setWindow(left(),
+                  path()->parent() == nullptr ? 1 : path()->parent()->numOfEntries(), 0, 0);
+        setWindow(middle(), path()->current()->numOfEntries(), 0, 0);
+        setWindow(right(), path()->child()->numOfEntries(), 0, 0);
 
         draw();
     } break;
     case RIGHT: {
-        if (!fs::is_directory(path()->getFileByLine(middle()->line())->path))
+        if (!fs::is_directory(path()->current()->getFileByLine(middle()->line())->path))
             break;
-        
+
         wclear(stdscr);
         wrefresh(stdscr);
 
@@ -298,12 +308,15 @@ void Miller::move(Direction direction) {
 
         middle()->setLine(0);
 
-        path()->previewChild(right());
+        //if (fs::is_empty(path()->path()))
+            //path()->current()->addVirtual("empty");
+        //else
+            path()->previewChild(right());
 
         // resize the pad
-        setWindow(left(), path()->getNumOfEntry(path()->parent()), 0, 0);
-        setWindow(middle(), path()->getNumOfEntry(path()->current()), 0, 0);
-        setWindow(right(), path()->getNumOfEntry(path()->child()), 0, 0);
+        setWindow(left(), path()->parent()->numOfEntries(), 0, 0);
+        setWindow(middle(), path()->current()->numOfEntries(), 0, 0);
+        setWindow(right(), path()->child()->numOfEntries(), 0, 0);
 
         draw();
     } break;

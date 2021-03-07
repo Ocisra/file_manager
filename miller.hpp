@@ -41,6 +41,8 @@ enum Colors {
     SYMLINK_HID,      SYMLINK_HID_FG,
     BLOCK_HID,          BLOCK_HID_FG,
     SOCKET_HID,        SOCKET_HID_FG,
+
+    VIRTUAL,         VIRTUAL_FG,     VIRTUAL_BG,
 };
 // clang-format on
 #define HIDDEN_DARKENING_PERC 0.6
@@ -85,7 +87,8 @@ class Miller {
     void resizeTerm();
     void move(Direction direction);
     Colors matchColor(lft::filetype *ft);
-    Colors getFileColor();
+    Colors getFileColor(Entry *entry);
+    Colors getCurrentFileColor();
 
     /// Get the corresponding window
     inline Window *left() { return panelLeft; }
@@ -100,7 +103,7 @@ class Miller {
     }
     inline bool isAtTopOfEntries() { return middle()->line() == 0; }
     inline bool isAtBottomOfEntries() {
-        return middle()->line() == path()->getNumOfEntry(path()->current()) - 1;
+        return middle()->line() == path()->current()->numOfEntries() - 1;
     }
     inline unsigned int wantedScrolloff() { return wantsScrolloff; }
     inline void setWantedScrolloff(unsigned int so) { wantsScrolloff = so; }
