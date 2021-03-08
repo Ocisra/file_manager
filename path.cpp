@@ -150,22 +150,6 @@ void Path::goDown() {
 }
 
 /**
- * Display the content of a directory in a window
- *
- * @param win: window in which to display
- * @param content: content to display
- */
-void Path::display(Window *win, Content *content) {
-    if (content == nullptr) {
-        return;
-    }
-    for (auto p = content->entries.begin(); p != content->entries.end(); p++) {
-        wattrset(win->win, COLOR_PAIR(miller->getFileColor(*p)));
-        win->noWrapOutput((*p)->path.filename().string() + "\n");
-    }
-}
-
-/**
  * Preview the child directory in the right panel
  *
  * @param win: window in which to preview
@@ -191,7 +175,7 @@ void Path::previewChild(Window *win) {
         log->debug(e.what());
     }
     setWindow(win, child()->numOfEntries(), 0, 0);
-    display(win, child());
+    win->display(child());
     prefresh(win->win, win->starty, win->startx, win->posy, win->posx,
              win->vsizey + win->posy, win->vsizex + win->posx);
 }

@@ -102,7 +102,6 @@ class Path {
     ~Path();
     bool goUp();
     void goDown();
-    void display(Window *win, Content *content);
     void previewChild(Window *win);
     int find(Content *content, fs::path p);
 
