@@ -96,7 +96,8 @@ class Miller {
     inline Window *middle() { return panelMiddle; }
     inline Window *right() { return panelRight; }
     inline Window *top() { return topLine; }
-    inline Window *bottom() { return bottomLine; }
+    inline Window *bottomLeft() { return bottomLeftLine; }
+    inline Window *bottomRight() { return bottomRightLine; }
 
     inline bool isAtTopOfWindow() {
         return middle()->line() <= middle()->starty + scrolloff();
@@ -116,8 +117,12 @@ class Miller {
     inline void setPath(Path *p) { currentPath = p; }
 
     private:
-    inline void updateWD() { wclear(top()->win); top()->noWrapOutput(path()->path().string()); }
-    inline void updateFileStatus();
+    inline void updateWD() {
+        wclear(top()->win);
+        top()->noWrapOutput(path()->path().string());
+    }
+    void updateFileStatus();
+    void updateDirStatus();
     unsigned int wantsScrolloff;  // the wanted scrolloff
     // when screen is too small, it might be reduced so the cursor can be visible giving:
     unsigned int scrolloffLines;  // lines to keep below and above cursor
@@ -125,7 +130,8 @@ class Miller {
     Window *panelMiddle;
     Window *panelRight;
     Window *topLine;
-    Window *bottomLine;
+    Window *bottomLeftLine;
+    Window *bottomRightLine;
     Path *currentPath;
 };
 
