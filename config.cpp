@@ -57,6 +57,22 @@ void parseConfigFile(fs::path configFile, Config *config) {
                 else
                     log->warning(e, "Unknown option to 'order' in configuration");
             }
+        } else if (line.starts_with("text_file_openers=")) {
+            auto openers = getEnum(line.substr(17), ',');
+            for (auto &e : openers)
+                config->text_file_openers.emplace_back(e);
+        } else if (line.starts_with("image_openers=")) {
+            auto openers = getEnum(line.substr(17), ',');
+            for (auto &e : openers)
+                config->image_openers.emplace_back(e);
+        } else if (line.starts_with("video_openers=")) {
+            auto openers = getEnum(line.substr(17), ',');
+            for (auto &e : openers)
+                config->video_openers.emplace_back(e);
+        } else if (line.starts_with("pdf_openers=")) {
+            auto openers = getEnum(line.substr(17), ',');
+            for (auto &e : openers)
+                config->pdf_openers.emplace_back(e);
         }
     }
 }
