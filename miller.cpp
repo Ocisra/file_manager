@@ -109,12 +109,17 @@ Miller::Miller(unsigned int scrolloff, fs::path start_path) {
 
     // clang-format off
     // Create the 3 panels
-    setWindow(left(), maxx / 8, path()->parent() == nullptr ? 1 : path()->parent()->numOfEntries(), 0, 0,
-              0, 0 + 1 /*top bar*/, maxx / 8 - 1, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
-    setWindow(middle(), 3 * maxx / 8, path()->current()->numOfEntries(), 0, 0, maxx / 8,
-              0 + 1 /*top bar*/, 3 * maxx / 8 - 1, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
-    setWindow(right(), maxx / 2, path()->child()->numOfEntries(), 0, 0, maxx / 2,
-              0 + 1 /*top bar*/, maxx / 2, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
+    // sizex and vsizex are everywhere the same
+    setWindow(left(), maxx / 8 - 1 - 1 /*spacing*/,
+              path()->parent() == nullptr ? 1 : path()->parent()->numOfEntries(), 0, 0,
+              0, 0 + 1 /*top bar*/, maxx / 8 - 1 - 1 /*spacing*/,
+              maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
+    setWindow(middle(), 3 * maxx / 8 - 1 - 1 /*spacing*/,
+              path()->current()->numOfEntries(), 0, 0, maxx / 8,
+              0 + 1 /*top bar*/, 3 * maxx / 8 - 1 - 1 /*spacing*/,
+              maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
+    setWindow(right(), maxx / 2 - 1 /*spacing*/, path()->child()->numOfEntries(), 0, 0, maxx / 2,
+              0 + 1 /*top bar*/, maxx / 2 - 1 /*spacing*/, maxy - 1 - 1 /*status bar*/ - 1 /*top bar*/);
     setWindow(top(), maxx, 1, 0, 0, 0, 0, maxx, 1);
     setWindow(bottomLeft(), maxx / 2, 1, 0, 0, 0, maxy - 1, maxx / 2, 1);
     setWindow(bottomRight(), maxx / 2, 1, 0, 0, maxx / 2, maxy - 1, maxx / 2, 1);
@@ -137,8 +142,8 @@ Miller::Miller(unsigned int scrolloff, fs::path start_path) {
     log->debug(middle(), " Init middle");
     log->debug(right(), "Init right");
     log->debug(top(), "Init top");
-    log->debug(bottomLeft(), "Init bottom");
-    log->debug(bottomRight(), "Init bottom");
+    log->debug(bottomLeft(), "Init bottom left");
+    log->debug(bottomRight(), "Init bottom right");
 }
 
 Miller::~Miller() {
@@ -292,7 +297,6 @@ void Miller::updateDirStatus() {
     }
 
 
-
     // free space in filesystem
     output += formatBytes(fs::space(dir).available);
     output += " free  ";
@@ -369,23 +373,27 @@ void Miller::resizeTerm() {
     int maxx, maxy;
     getmaxyx(stdscr, maxy, maxx);
 
-    auto setWindow = [](Window *win, int posx, int posy, int vsizex, int vsizey) {
-        win->posx   = posx;
-        win->posy   = posy;
-        win->vsizex = vsizex;
-        win->vsizey = vsizey;
-    };
+    auto setWindow
+      = [](Window *win, int sizex, int posx, int posy, int vsizex, int vsizey) {
+            win->sizex  = sizex;
+            win->posx   = posx;
+            win->posy   = posy;
+            win->vsizex = vsizex;
+            win->vsizey = vsizey;
+            wresize(win->win, win->sizey, win->sizex);
+        };
 
     // clang-format off
-    setWindow(left(), 0, 0 + 1 /*top bar*/, maxx / 8 - 1,
-            maxy - 1 - 1 /*top bar*/ - 1 /*status bar*/);
-    setWindow(middle(), maxx / 8, 0 + 1 /*top bar*/, 3 * maxx / 8 - 1,
-            maxy - 1 - 1 /*top bar*/ - 1 /*status bar*/);
-    setWindow(right(), maxx / 2, 0 + 1 /*top bar*/, maxx / 2,
-            maxy - 1 - 1 /*top bar*/ - 1 /*status bar*/);
-    setWindow(top(), 0, 0, maxx, 1);
-    setWindow(bottomLeft(), 0, maxy - 1, maxx / 2, 1);
-    setWindow(bottomRight(), maxx / 2, maxy - 1, maxx / 2, 1);
+    // sizex and vsizex are everywhere the same
+    setWindow(left(), maxx / 8 - 1 - 1 /*spacing*/, 0, 0 + 1 /*top bar*/,
+            maxx / 8 - 1 - 1 /*spacing*/, maxy - 1 - 1 /*top bar*/ - 1 /*status bar*/);
+    setWindow(middle(), 3 * maxx / 8 - 1 - 1 /*spacing*/, maxx / 8, 0 + 1 /*top bar*/,
+            3 * maxx / 8 - 1 - 1 /*spacing*/, maxy - 1 - 1 /*top bar*/ - 1 /*status bar*/);
+    setWindow(right(), maxx / 2 - 1 /*spacing*/, maxx / 2, 0 + 1 /*top bar*/,
+            maxx / 2 - 1 /*spacing*/, maxy - 1 - 1 /*top bar*/ - 1 /*status bar*/);
+    setWindow(top(), maxx, 0, 0, maxx, 1);
+    setWindow(bottomLeft(), maxx / 2 - 1 /*spacing*/, 0, maxy - 1, maxx / 2 - 1 /*spacing*/, 1);
+    setWindow(bottomRight(), maxx / 2 - 1 /*spacing*/, maxx / 2, maxy - 1, maxx / 2 - 1 /*spacing*/, 1);
     // clang-format on
 
     // Set scrolloff accordig to the size of the window
@@ -394,10 +402,6 @@ void Miller::resizeTerm() {
     else
         setScrolloff((maxy - 1) / 2);
 
-    // clear the screen, otherwise the charcater that are in place that won't be covered
-    // by a Window won't be cleared giving a trailing effect
-    wclear(stdscr);
-    wrefresh(stdscr);
 
     prefresh(left()->win, left()->starty, left()->startx, left()->posy, left()->posx,
              left()->vsizey + left()->posy, left()->vsizex + left()->posx);
@@ -414,13 +418,17 @@ void Miller::resizeTerm() {
              bottomRight()->posy, bottomRight()->posx,
              bottomRight()->vsizey + bottomRight()->posy,
              bottomRight()->vsizex + bottomRight()->posx);
+    
+    draw();
+    updateDirStatus();
+    updateFileStatus();
 
     log->debug(left(), "Resize left");
     log->debug(middle(), "Resize middle");
     log->debug(right(), "Resize right");
     log->debug(top(), "Resize top");
-    log->debug(bottomLeft(), "Resize bottom");
-    log->debug(bottomRight(), "Resize bottom");
+    log->debug(bottomLeft(), "Resize bottom left");
+    log->debug(bottomRight(), "Resize bottom right");
 }
 
 /**
