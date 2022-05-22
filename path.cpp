@@ -155,8 +155,6 @@ void Path::goDown() {
  * @param win: window in which to preview
  */
 void Path::previewChild(Window *win) {
-    wclear(win->win);
-
     delete child();
     setChild(new Content);
     auto setWindow = [](Window *win, int sizey, int startx, int starty) {
@@ -174,7 +172,10 @@ void Path::previewChild(Window *win) {
         child()->addVirtual("not accessible");
         log->debug(e.what());
     }
-    setWindow(win, child()->numOfEntries(), 0, 0);
+    setWindow(win, child()->numOfEntries(), 0, 0); // why did i write this
+    //setWindow(win, win->sizey, 0, 0); // prob because this is usually too long so lag
+
+    wclear(win->win);
     win->display(child());
     prefresh(win->win, win->starty, win->startx, win->posy, win->posx,
              win->vsizey + win->posy, win->vsizex + win->posx);

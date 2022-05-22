@@ -32,7 +32,7 @@ struct Entry {
 
 /**
  * Custom sort function.
- * It is not case sensible and handle numbers as expected (lower go first)
+ * It is not case sensitive and handle numbers as expected (lower go first)
  */
 static auto contentSort = [](Entry *a, Entry *b) {
     lft::generalFT af = ft_finder->getFiletype(a->path)->general;

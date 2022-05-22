@@ -14,10 +14,10 @@ struct Config {
     std::vector<lft::generalFT> filetype_order;
 
     // file opener
-    std::vector<std::string> text_file_openers = {"nvim", "vim", "vi", "ed"};
-    std::vector<std::string> image_openers = {"vimiv"};
-    std::vector<std::string> video_openers = {"vlc"};
-    std::vector<std::string> pdf_openers = {"zathura"};
+    std::vector<std::string> text_file_openers;
+    std::vector<std::string> image_openers;
+    std::vector<std::string> video_openers;
+    std::vector<std::string> pdf_openers;
 };
 
 Config *getConfig(int argc, char *argv[]);

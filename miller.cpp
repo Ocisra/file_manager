@@ -2,6 +2,7 @@
 
 #include "config.hpp"
 #include "log.hpp"
+#include "opener.hpp"
 #include "path.hpp"
 
 #include <cstdint>
@@ -57,7 +58,7 @@ void Window::noWrapOutput(std::string output) {
     if (output.length() > (unsigned long)maxx) {
         output = output.substr(0, maxx);
     }
-    wprintw(win, output.c_str());
+    wprintw(win, "%s", output.c_str());
     // TODO possibly uneeded, to test
     // prefresh(win, starty, startx, posy, posx, vsizey + posy, vsizex + posx);
 }
@@ -373,15 +374,14 @@ void Miller::resizeTerm() {
     int maxx, maxy;
     getmaxyx(stdscr, maxy, maxx);
 
-    auto setWindow
-      = [](Window *win, int sizex, int posx, int posy, int vsizex, int vsizey) {
-            win->sizex  = sizex;
-            win->posx   = posx;
-            win->posy   = posy;
-            win->vsizex = vsizex;
-            win->vsizey = vsizey;
-            wresize(win->win, win->sizey, win->sizex);
-        };
+    auto setWindow = [](Window *win, int sizex, int posx, int posy, int vsizex, int vsizey) {
+        win->sizex  = sizex;
+        win->posx   = posx;
+        win->posy   = posy;
+        win->vsizex = vsizex;
+        win->vsizey = vsizey;
+        wresize(win->win, win->sizey, win->sizex);
+    };
 
     // clang-format off
     // sizex and vsizex are everywhere the same
@@ -418,7 +418,7 @@ void Miller::resizeTerm() {
              bottomRight()->posy, bottomRight()->posx,
              bottomRight()->vsizey + bottomRight()->posy,
              bottomRight()->vsizex + bottomRight()->posx);
-    
+
     draw();
     updateDirStatus();
     updateFileStatus();
@@ -497,24 +497,27 @@ void Miller::move(Direction direction) {
         draw();
     } break;
     case RIGHT: {
-        if (!fs::is_directory(path()->current()->getFileByLine(middle()->line())->path))
-            return;
+        Entry *currentEntry = path()->current()->getFileByLine(middle()->line());
+        // TODO : if no rights, return
+        if (fs::is_directory(currentEntry->path) && !fs::is_empty(currentEntry->path)) {
+            wclear(stdscr);
+            wrefresh(stdscr);
 
-        wclear(stdscr);
-        wrefresh(stdscr);
+            path()->goDown();
 
-        path()->goDown();
+            middle()->setLine(0);
 
-        middle()->setLine(0);
+            path()->previewChild(right());
 
-        path()->previewChild(right());
+            // resize the pad
+            setWindow(left(), path()->parent()->numOfEntries(), 0, 0);
+            setWindow(middle(), path()->current()->numOfEntries(), 0, 0);
+            setWindow(right(), path()->child()->numOfEntries(), 0, 0);
 
-        // resize the pad
-        setWindow(left(), path()->parent()->numOfEntries(), 0, 0);
-        setWindow(middle(), path()->current()->numOfEntries(), 0, 0);
-        setWindow(right(), path()->child()->numOfEntries(), 0, 0);
-
-        draw();
+            draw();
+        } else if (fs::is_regular_file(currentEntry->path)) {
+            opener::open(currentEntry);
+        }
     } break;
     }
     updateFileStatus();

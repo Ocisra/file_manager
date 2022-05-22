@@ -58,19 +58,19 @@ void parseConfigFile(fs::path configFile, Config *config) {
                     log->warning(e, "Unknown option to 'order' in configuration");
             }
         } else if (line.starts_with("text_file_openers=")) {
-            auto openers = getEnum(line.substr(17), ',');
+            auto openers = getEnum(line.substr(18), ',');
             for (auto &e : openers)
                 config->text_file_openers.emplace_back(e);
         } else if (line.starts_with("image_openers=")) {
-            auto openers = getEnum(line.substr(17), ',');
+            auto openers = getEnum(line.substr(14), ',');
             for (auto &e : openers)
                 config->image_openers.emplace_back(e);
         } else if (line.starts_with("video_openers=")) {
-            auto openers = getEnum(line.substr(17), ',');
+            auto openers = getEnum(line.substr(14), ',');
             for (auto &e : openers)
                 config->video_openers.emplace_back(e);
         } else if (line.starts_with("pdf_openers=")) {
-            auto openers = getEnum(line.substr(17), ',');
+            auto openers = getEnum(line.substr(12), ',');
             for (auto &e : openers)
                 config->pdf_openers.emplace_back(e);
         }
@@ -93,7 +93,7 @@ void parseCommandLine(int argc, char *argv[], Config *config) {
 }
 
 Config *getConfig(int argc, char *argv[]) {
-    Config *config = new Config;
+    Config *conf = new Config;
     std::string config_path;
     bool canSearchForConfigFile = true;
 
@@ -113,9 +113,9 @@ Config *getConfig(int argc, char *argv[]) {
         fs::path config_file = fs::path(config_dir.string() + "/config");
 
         if (fs::is_directory(config_dir) && fs::is_regular_file(config_file))
-            parseConfigFile(config_file, config);
+            parseConfigFile(config_file, conf);
     }
 
-    parseCommandLine(argc, argv, config);
-    return config;
+    parseCommandLine(argc, argv, conf);
+    return conf;
 }
