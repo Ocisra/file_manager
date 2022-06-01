@@ -1,0 +1,6 @@
+order=dir
+
+text_file_openers=nvim,vim,vi
+image_openers=
+video_openers=
+pdf_openers=
