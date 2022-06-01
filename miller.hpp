@@ -86,7 +86,10 @@ class Miller {
     ~Miller();
     void draw();
     void resizeTerm();
-    void move(Direction direction);
+    void moveUpCursor();
+    void moveDownCursor();
+    void moveUpDir();
+    void moveDownDir();
     Colors matchColor(lft::filetype *ft);
     Colors getFileColor(Entry *entry);
     Colors getCurrentFileColor();
@@ -118,7 +121,7 @@ class Miller {
 
     private:
     inline void updateWD() {
-        wclear(top()->win);
+        werase(top()->win);
         top()->noWrapOutput(path()->path().string());
     }
     void updateFileStatus();

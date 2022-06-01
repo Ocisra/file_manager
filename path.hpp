@@ -125,6 +125,10 @@ class Path {
     int getIndex(std::set<Entry *, decltype(contentSort)> &s, fs::path p);
 };
 
-extern Path *path;
+//extern Path *path;
+
+namespace path {
+    fs::path simplify(const fs::path& p);
+}
 
 #endif  // PATH_HPP

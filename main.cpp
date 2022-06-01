@@ -1,8 +1,8 @@
 #include "config.hpp"
 #include "log.hpp"
+#include "mapping.hpp"
 #include "miller.hpp"
 #include "path.hpp"
-#include "libft-detect.hpp"
 
 #include <csignal>
 #include <cstdlib>
@@ -14,26 +14,13 @@
 #include <ncurses.h>
 #include <unistd.h>
 
+#include "libft-detect.hpp"
+
 
 /// Test config ///////////
-#define SCROLLOFF 3
+#define SCROLLOFF       3
 #define MIME_TYPES_PATH "/usr/share/mime/globs"
 /// ///////////////////////
-
-/**
- * Clean exit
- */
-int quit() {
-    delete miller;
-    endwin();
-    log->info("Quitting");
-    if (config->print_debug) {
-        std::cout << std::ifstream(log->logFilePath()).rdbuf();
-    }
-    delete config;
-    delete log;
-    exit(0);
-}
 
 
 /**
@@ -47,32 +34,38 @@ void init_colors() {
 
     init_color(REGULAR_FG, 900, 900, 900);
     init_pair(REGULAR, REGULAR_FG, -1);
-    init_color(REGULAR_HID_FG, 900*HIDDEN_DARKENING_PERC, 900*HIDDEN_DARKENING_PERC, 900*HIDDEN_DARKENING_PERC);
+    init_color(REGULAR_HID_FG, 900 * HIDDEN_DARKENING_PERC, 900 * HIDDEN_DARKENING_PERC,
+               900 * HIDDEN_DARKENING_PERC);
     init_pair(REGULAR_HID, REGULAR_HID_FG, -1);
 
     init_color(DIRECTORY_FG, 866, 733, 133);
     init_pair(DIRECTORY, DIRECTORY_FG, -1);
-    init_color(DIRECTORY_HID_FG, 866*HIDDEN_DARKENING_PERC, 733*HIDDEN_DARKENING_PERC, 133*HIDDEN_DARKENING_PERC);
+    init_color(DIRECTORY_HID_FG, 866 * HIDDEN_DARKENING_PERC, 733 * HIDDEN_DARKENING_PERC,
+               133 * HIDDEN_DARKENING_PERC);
     init_pair(DIRECTORY_HID, DIRECTORY_HID_FG, -1);
 
     init_color(FIFO_FG, 133, 733, 866);
     init_pair(FIFO, FIFO_FG, -1);
-    init_color(FIFO_HID_FG, 133*HIDDEN_DARKENING_PERC, 733*HIDDEN_DARKENING_PERC, 866*HIDDEN_DARKENING_PERC);
+    init_color(FIFO_HID_FG, 133 * HIDDEN_DARKENING_PERC, 733 * HIDDEN_DARKENING_PERC,
+               866 * HIDDEN_DARKENING_PERC);
     init_pair(FIFO_HID, FIFO_FG, -1);
 
     init_color(SYMLINK_FG, 266, 800, 133);
     init_pair(SYMLINK, SYMLINK_FG, -1);
-    init_color(SYMLINK_HID_FG, 133*HIDDEN_DARKENING_PERC, 800*HIDDEN_DARKENING_PERC, 133*HIDDEN_DARKENING_PERC);
+    init_color(SYMLINK_HID_FG, 133 * HIDDEN_DARKENING_PERC, 800 * HIDDEN_DARKENING_PERC,
+               133 * HIDDEN_DARKENING_PERC);
     init_pair(SYMLINK_HID, SYMLINK_HID_FG, -1);
 
     init_color(BLOCK_FG, 600, 266, 66);
     init_pair(BLOCK, BLOCK_FG, -1);
-    init_color(BLOCK_HID_FG, 600*HIDDEN_DARKENING_PERC, 266*HIDDEN_DARKENING_PERC, 66*HIDDEN_DARKENING_PERC);
+    init_color(BLOCK_HID_FG, 600 * HIDDEN_DARKENING_PERC, 266 * HIDDEN_DARKENING_PERC,
+               66 * HIDDEN_DARKENING_PERC);
     init_pair(BLOCK_HID, BLOCK_HID_FG, -1);
 
     init_color(SOCKET_FG, 733, 133, 866);
     init_pair(SOCKET, SOCKET_FG, -1);
-    init_color(SOCKET_HID_FG, 733*HIDDEN_DARKENING_PERC, 133*HIDDEN_DARKENING_PERC, 866*HIDDEN_DARKENING_PERC);
+    init_color(SOCKET_HID_FG, 733 * HIDDEN_DARKENING_PERC, 133 * HIDDEN_DARKENING_PERC,
+               866 * HIDDEN_DARKENING_PERC);
     init_pair(SOCKET_HID, SOCKET_HID_FG, -1);
 
     init_color(UNKNOWN_FG, 700, 700, 700);
@@ -99,7 +92,7 @@ int main(int argc, char *argv[]) {
     log = new Logger("/tmp/file_manager.log", Logger::Log_Trace);
     log->info("Starting with " + std::to_string(argc) + " arguments");
 
-    config = getConfig(argc, argv);
+    config    = getConfig(argc, argv);
     ft_finder = new lft(MIME_TYPES_PATH);
 
     initscr();
@@ -117,18 +110,38 @@ int main(int argc, char *argv[]) {
     keypad(stdscr, TRUE);
 
     int c;
+    std::string keyStreak;  // the streak of character input that can still be used
 
     while (true) {
-        c = wgetch(miller->right()->win);
+        c = getch();
+
 
         switch (c) {
         case KEY_RESIZE: miller->resizeTerm(); break;
-        case 'q': quit();
-        case 'k': miller->move(UP); break;
-        case 'j': miller->move(DOWN); break;
-        case 'h': miller->move(LEFT); break;
-        case 'l': miller->move(RIGHT); break;
-        default:;
+        /*case 'k': miller->moveUpCursor(); break;
+        case 'j': miller->moveDownCursor(); break;
+        case 'h': miller->moveUpDir(); break;
+        case 'l': miller->moveDownDir(); break;
+        default:;*/
+        default: {
+            keyStreak += c;
+            MappingSet possibleMappings;
+            int startingChar = Mappings::extract(&keyStreak, config->mappings, &possibleMappings);
+            if (startingChar == -1) {
+                keyStreak.clear();
+                continue;
+            }
+            keyStreak.erase(0, startingChar);  // we don't need the beginning, it doesn't
+                                               // correspond to a mapping
+            if (possibleMappings.size() > 1) {
+                continue;
+            }
+            if (possibleMappings.begin()->key_sequence == keyStreak) {
+                possibleMappings.begin()->action(miller);
+                keyStreak.clear();
+            }
         }
+        }
+        doupdate();
     }
 }

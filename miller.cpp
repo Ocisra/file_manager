@@ -2,7 +2,7 @@
 
 #include "config.hpp"
 #include "log.hpp"
-#include "opener.hpp"
+#include "movement.hpp"
 #include "path.hpp"
 
 #include <cstdint>
@@ -45,7 +45,7 @@ void Window::scroll(Direction direction) {
     case DOWN: starty++; break;
     default:;
     }
-    prefresh(win, starty, startx, posy, posx, vsizey + posy, vsizex + posx);
+    pnoutrefresh(win, starty, startx, posy, posx, vsizey + posy, vsizex + posx);
 }
 
 /**
@@ -58,9 +58,7 @@ void Window::noWrapOutput(std::string output) {
     if (output.length() > (unsigned long)maxx) {
         output = output.substr(0, maxx);
     }
-    wprintw(win, "%s", output.c_str());
-    // TODO possibly uneeded, to test
-    // prefresh(win, starty, startx, posy, posx, vsizey + posy, vsizex + posx);
+    waddnstr(win, output.c_str(), maxx);
 }
 
 /**
@@ -136,8 +134,6 @@ Miller::Miller(unsigned int scrolloff, fs::path start_path) {
         setScrolloff((maxy - 1) / 2);
 
     draw();
-    updateFileStatus();
-    updateDirStatus();
 
     log->debug(left(), "Init left");
     log->debug(middle(), " Init middle");
@@ -216,7 +212,7 @@ Colors Miller::getCurrentFileColor() {
  * Update the file status information in the bottom window
  */
 void Miller::updateFileStatus() {
-    wclear(bottomLeft()->win);
+    werase(bottomLeft()->win);
     fs::path file = path()->current()->getFileByLine(middle()->line())->path;
     std::string output;
 
@@ -277,16 +273,17 @@ void Miller::updateFileStatus() {
 
 
     bottomLeft()->noWrapOutput(output);
-    prefresh(bottomLeft()->win, bottomLeft()->starty, bottomLeft()->startx,
-             bottomLeft()->posy, bottomLeft()->posx, bottomLeft()->vsizey + bottomLeft()->posy,
-             bottomLeft()->vsizex + bottomLeft()->posx);
+    pnoutrefresh(bottomLeft()->win, bottomLeft()->starty, bottomLeft()->startx,
+                 bottomLeft()->posy, bottomLeft()->posx,
+                 bottomLeft()->vsizey + bottomLeft()->posy,
+                 bottomLeft()->vsizex + bottomLeft()->posx);
 }
 
 /**
  * Update the folder status information in the bottom window
  */
 void Miller::updateDirStatus() {
-    wclear(bottomRight()->win);
+    werase(bottomRight()->win);
     fs::path dir = path()->path();
     std::string output;
     std::string paddedOutput;  // output but padded with spaces to right align
@@ -314,10 +311,10 @@ void Miller::updateDirStatus() {
     paddedOutput += output;
 
     bottomRight()->noWrapOutput(paddedOutput);
-    prefresh(bottomRight()->win, bottomRight()->starty, bottomRight()->startx,
-             bottomRight()->posy, bottomRight()->posx,
-             bottomRight()->vsizey + bottomRight()->posy,
-             bottomRight()->vsizex + bottomRight()->posx);
+    pnoutrefresh(bottomRight()->win, bottomRight()->starty, bottomRight()->startx,
+                 bottomRight()->posy, bottomRight()->posx,
+                 bottomRight()->vsizey + bottomRight()->posy,
+                 bottomRight()->vsizex + bottomRight()->posx);
 }
 
 /**
@@ -326,11 +323,11 @@ void Miller::updateDirStatus() {
  * content of the windows
  */
 void Miller::draw() {
-    wclear(stdscr);
-    wrefresh(stdscr);
-    wclear(left()->win);
-    wclear(middle()->win);
-    wclear(right()->win);
+    werase(stdscr);
+    wnoutrefresh(stdscr);
+    werase(left()->win);
+    werase(middle()->win);
+    werase(right()->win);
 
     // useful in case the UI needs to be debugged
     // box(left()->win, 0, 0);
@@ -346,25 +343,30 @@ void Miller::draw() {
     updateWD();
 
 
-    prefresh(left()->win, left()->starty, left()->startx, left()->posy, left()->posx,
-             left()->vsizey + left()->posy, left()->vsizex + left()->posx);
-    prefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy, middle()->posx,
-             middle()->vsizey + middle()->posy, middle()->vsizex + middle()->posx);
-    prefresh(right()->win, right()->starty, right()->startx, right()->posy, right()->posx,
-             right()->vsizey + right()->posy, right()->vsizex + right()->posx);
-    prefresh(top()->win, top()->starty, top()->startx, top()->posy, top()->posx,
-             top()->vsizey + top()->posy, top()->vsizex + top()->posx);
-    prefresh(bottomLeft()->win, bottomLeft()->starty, bottomLeft()->startx,
-             bottomLeft()->posy, bottomLeft()->posx, bottomLeft()->vsizey + bottomLeft()->posy,
-             bottomLeft()->vsizex + bottomLeft()->posx);
-    prefresh(bottomRight()->win, bottomRight()->starty, bottomRight()->startx,
-             bottomRight()->posy, bottomRight()->posx,
-             bottomRight()->vsizey + bottomRight()->posy,
-             bottomRight()->vsizex + bottomRight()->posx);
-
+    pnoutrefresh(left()->win, left()->starty, left()->startx, left()->posy, left()->posx,
+                 left()->vsizey + left()->posy, left()->vsizex + left()->posx);
+    pnoutrefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy,
+                 middle()->posx, middle()->vsizey + middle()->posy,
+                 middle()->vsizex + middle()->posx);
+    pnoutrefresh(right()->win, right()->starty, right()->startx, right()->posy, right()->posx,
+                 right()->vsizey + right()->posy, right()->vsizex + right()->posx);
+    pnoutrefresh(top()->win, top()->starty, top()->startx, top()->posy, top()->posx,
+                 top()->vsizey + top()->posy, top()->vsizex + top()->posx);
+    pnoutrefresh(bottomLeft()->win, bottomLeft()->starty, bottomLeft()->startx,
+                 bottomLeft()->posy, bottomLeft()->posx,
+                 bottomLeft()->vsizey + bottomLeft()->posy,
+                 bottomLeft()->vsizex + bottomLeft()->posx);
+    pnoutrefresh(bottomRight()->win, bottomRight()->starty, bottomRight()->startx,
+                 bottomRight()->posy, bottomRight()->posx,
+                 bottomRight()->vsizey + bottomRight()->posy,
+                 bottomRight()->vsizex + bottomRight()->posx);
+    updateFileStatus();
+    updateDirStatus();
+    // doupdate();
 
     wmove(middle()->win, middle()->line(), 0);
-    middle()->attr_line(SELECTED);
+    if (!(*path()->current()->entries.begin())->isVirtual)
+        middle()->attr_line(SELECTED);
 }
 
 /**
@@ -403,21 +405,23 @@ void Miller::resizeTerm() {
         setScrolloff((maxy - 1) / 2);
 
 
-    prefresh(left()->win, left()->starty, left()->startx, left()->posy, left()->posx,
-             left()->vsizey + left()->posy, left()->vsizex + left()->posx);
-    prefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy, middle()->posx,
-             middle()->vsizey + middle()->posy, middle()->vsizex + middle()->posx);
-    prefresh(right()->win, right()->starty, right()->startx, right()->posy, right()->posx,
-             right()->vsizey + right()->posy, right()->vsizex + right()->posx);
-    prefresh(top()->win, top()->starty, top()->startx, top()->posy, top()->posx,
-             top()->vsizey + top()->posy, top()->vsizex + top()->posx);
-    prefresh(bottomLeft()->win, bottomLeft()->starty, bottomLeft()->startx,
-             bottomLeft()->posy, bottomLeft()->posx, bottomLeft()->vsizey + bottomLeft()->posy,
-             bottomLeft()->vsizex + bottomLeft()->posx);
-    prefresh(bottomRight()->win, bottomRight()->starty, bottomRight()->startx,
-             bottomRight()->posy, bottomRight()->posx,
-             bottomRight()->vsizey + bottomRight()->posy,
-             bottomRight()->vsizex + bottomRight()->posx);
+    pnoutrefresh(left()->win, left()->starty, left()->startx, left()->posy, left()->posx,
+                 left()->vsizey + left()->posy, left()->vsizex + left()->posx);
+    pnoutrefresh(middle()->win, middle()->starty, middle()->startx, middle()->posy,
+                 middle()->posx, middle()->vsizey + middle()->posy,
+                 middle()->vsizex + middle()->posx);
+    pnoutrefresh(right()->win, right()->starty, right()->startx, right()->posy, right()->posx,
+                 right()->vsizey + right()->posy, right()->vsizex + right()->posx);
+    pnoutrefresh(top()->win, top()->starty, top()->startx, top()->posy, top()->posx,
+                 top()->vsizey + top()->posy, top()->vsizex + top()->posx);
+    pnoutrefresh(bottomLeft()->win, bottomLeft()->starty, bottomLeft()->startx,
+                 bottomLeft()->posy, bottomLeft()->posx,
+                 bottomLeft()->vsizey + bottomLeft()->posy,
+                 bottomLeft()->vsizex + bottomLeft()->posx);
+    pnoutrefresh(bottomRight()->win, bottomRight()->starty, bottomRight()->startx,
+                 bottomRight()->posy, bottomRight()->posx,
+                 bottomRight()->vsizey + bottomRight()->posy,
+                 bottomRight()->vsizex + bottomRight()->posx);
 
     draw();
     updateDirStatus();
@@ -431,12 +435,46 @@ void Miller::resizeTerm() {
     log->debug(bottomRight(), "Resize bottom right");
 }
 
-/**
- * Handle every movement
- *
- * @param direction: the direction to go
- */
-void Miller::move(Direction direction) {
+
+void Miller::moveUpCursor() {
+    if (isAtTopOfEntries())
+        return;
+
+    middle()->attr_line(getCurrentFileColor());  // remove highlighting on 'old' line
+
+    if (isAtTopOfWindow() && middle()->line() > scrolloff())
+        middle()->scroll(UP);
+
+    middle()->setLine(middle()->line() - 1);
+    wmove(middle()->win, middle()->line(), 0);
+
+    path()->previewChild(right());
+
+    middle()->attr_line(SELECTED);  // add highlighting on 'new' line
+
+    updateFileStatus();
+}
+
+void Miller::moveDownCursor() {
+    if (isAtBottomOfEntries())
+        return;
+
+    middle()->attr_line(getCurrentFileColor());  // remove highlighting on 'old' line
+
+    if (isAtBottomOfWindow() && middle()->line() + scrolloff() < path()->current()->numOfEntries() - 1)
+        middle()->scroll(DOWN);
+
+    middle()->setLine(middle()->line() + 1);
+    wmove(middle()->win, middle()->line(), 0);
+
+    path()->previewChild(right());
+
+    middle()->attr_line(SELECTED);  // add highlighting on 'new' line
+
+    updateFileStatus();
+}
+
+void Miller::moveUpDir() {
     auto setWindow = [](Window *win, int sizey, int startx, int starty) {
         win->sizey  = sizey;
         win->startx = startx;
@@ -444,84 +482,52 @@ void Miller::move(Direction direction) {
         wresize(win->win, win->sizey, win->sizex);
     };
 
-    switch (direction) {
-    case UP:
-        if (isAtTopOfEntries())
-            return;
+    if (path()->path().string() == "/") {
+        return;
+    }
+    path()->current()->getFileByLine(0);
 
-        middle()->attr_line(getCurrentFileColor());  // remove highlighting on 'old' line
+    middle()->setLine(path()->find(path()->parent(), path()->path()));
+    path()->goUp();
 
-        if (isAtTopOfWindow() && middle()->line() > scrolloff())
-            middle()->scroll(UP);
+    // resize the pad
+    setWindow(left(), path()->parent() == nullptr ? 1 : path()->parent()->numOfEntries(), 0, 0);
+    setWindow(middle(), path()->current()->numOfEntries(), 0, 0);
+    setWindow(right(), path()->child()->numOfEntries(), 0, 0);
 
-        middle()->setLine(middle()->line() - 1);
-        wmove(middle()->win, middle()->line(), 0);
+    draw();
+}
+
+void Miller::moveDownDir() {
+    auto setWindow = [](Window *win, int sizey, int startx, int starty) {
+        win->sizey  = sizey;
+        win->startx = startx;
+        win->starty = starty;
+        wresize(win->win, win->sizey, win->sizex);
+    };
+
+    Entry *currentEntry = path()->current()->getFileByLine(middle()->line());
+    // can enter if dir but not in the first entry is virtual and "not accessible"
+    if (fs::is_directory(currentEntry->path)
+        && !((*path()->child()->entries.begin())->isVirtual
+             && (*path()->child()->entries.begin())->path.string() == "not accessible")) {
+        werase(stdscr);
+
+        path()->goDown();
+
+        middle()->setLine(0);
 
         path()->previewChild(right());
-
-        middle()->attr_line(SELECTED);  // add highlighting on 'new' line
-
-        break;
-    case DOWN:
-        if (isAtBottomOfEntries())
-            return;
-
-        middle()->attr_line(getCurrentFileColor());  // remove highlighting on 'old' line
-
-        if (isAtBottomOfWindow()
-            && middle()->line() + scrolloff() < path()->current()->numOfEntries() - 1)
-            middle()->scroll(DOWN);
-
-        middle()->setLine(middle()->line() + 1);
-        wmove(middle()->win, middle()->line(), 0);
-
-        path()->previewChild(right());
-
-        middle()->attr_line(SELECTED);  // add highlighting on 'new' line
-
-        break;
-    case LEFT: {
-        if (path()->path().string() == "/") {
-            return;
-        }
-        path()->current()->getFileByLine(0);
-
-        middle()->setLine(path()->find(path()->parent(), path()->path()));
-        path()->goUp();
 
         // resize the pad
-        setWindow(left(), path()->parent() == nullptr ? 1 : path()->parent()->numOfEntries(), 0, 0);
+        setWindow(left(), path()->parent()->numOfEntries(), 0, 0);
         setWindow(middle(), path()->current()->numOfEntries(), 0, 0);
         setWindow(right(), path()->child()->numOfEntries(), 0, 0);
 
         draw();
-    } break;
-    case RIGHT: {
-        Entry *currentEntry = path()->current()->getFileByLine(middle()->line());
-        // TODO : if no rights, return
-        if (fs::is_directory(currentEntry->path) && !fs::is_empty(currentEntry->path)) {
-            wclear(stdscr);
-            wrefresh(stdscr);
-
-            path()->goDown();
-
-            middle()->setLine(0);
-
-            path()->previewChild(right());
-
-            // resize the pad
-            setWindow(left(), path()->parent()->numOfEntries(), 0, 0);
-            setWindow(middle(), path()->current()->numOfEntries(), 0, 0);
-            setWindow(right(), path()->child()->numOfEntries(), 0, 0);
-
-            draw();
-        } else if (fs::is_regular_file(currentEntry->path)) {
-            opener::open(currentEntry);
-        }
-    } break;
+    } else if (fs::is_regular_file(currentEntry->path)) {
+        movement::open(currentEntry);
     }
-    updateFileStatus();
-    updateDirStatus();
 }
 
 Miller *miller;

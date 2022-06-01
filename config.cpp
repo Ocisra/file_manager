@@ -1,6 +1,7 @@
 #include "config.hpp"
 
 #include "log.hpp"
+#include "path.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -84,8 +85,12 @@ void parseCommandLine(int argc, char *argv[], Config *config) {
             config->print_debug = true;
             continue;
         }
-        if (fs::exists(argv[i]) && fs::is_directory(argv[i])) {
-            config->start_path = fs::absolute(argv[i]);
+
+        std::string possible_path = argv[i];
+        if (argv[i][0] == '.')
+            possible_path = fs::current_path().string() + '/' + possible_path;
+        if (fs::exists(possible_path) && fs::is_directory(possible_path)) {
+            config->start_path = path::simplify(fs::path(possible_path));
             continue;
         }
         log->debug(argv[i], "Unknown command line option");

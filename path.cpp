@@ -87,7 +87,8 @@ Path::Path(fs::path start_path) {
     setChild(new Content);
 
     populateContent(current(), path());
-    populateContent(child(), current()->getFileByLine(0)->path);
+    if (fs::is_directory(current()->getFileByLine(0)->path))
+        populateContent(child(), current()->getFileByLine(0)->path);
 
     if (path().string() != "/") {
         setParent(new Content);
@@ -172,13 +173,13 @@ void Path::previewChild(Window *win) {
         child()->addVirtual("not accessible");
         log->debug(e.what());
     }
-    setWindow(win, child()->numOfEntries(), 0, 0); // why did i write this
-    //setWindow(win, win->sizey, 0, 0); // prob because this is usually too long so lag
+    setWindow(win, child()->numOfEntries(), 0, 0);  // why did i write this
+    // setWindow(win, win->sizey, 0, 0); // prob because this is usually too long so lag
 
-    wclear(win->win);
+    werase(win->win);
     win->display(child());
-    prefresh(win->win, win->starty, win->startx, win->posy, win->posx,
-             win->vsizey + win->posy, win->vsizex + win->posx);
+    pnoutrefresh(win->win, win->starty, win->startx, win->posy, win->posx,
+                 win->vsizey + win->posy, win->vsizex + win->posx);
 }
 /**
  * Find the index of the specified path
@@ -201,4 +202,31 @@ int Path::getIndex(std::set<Entry *, decltype(contentSort)> &s, fs::path p) {
         c++;
     }
     return -1;
+}
+
+/**
+ * Removes . and .. in a path and return the trimmed one
+ * TODO handle path like '/../some/path'
+ */
+fs::path path::simplify(const fs::path &p) {
+    std::string ps = p.string();
+    for (unsigned long i = 0; i < ps.size(); i++) {
+        if (i < ps.size() - 2 && ps[i] == '/' && ps[i + 1] == '.' && ps[i + 2] == '/') {
+            ps.erase(i, 2);
+            i--;  // go back to be sure to not miss anything
+        }
+        if (i == ps.size() - 2 && ps[i] == '/' && ps[i + 1] == '.')
+            ps.erase(i, 2);
+        if (i < ps.size() - 3 && ps[i] == '/' && ps[i + 1] == '.' && ps[i + 2] == '.'
+            && ps[i + 3] == '/') {
+            int pos = ps.rfind("/", i - 1);
+            ps.erase(pos, i - pos + 3);
+            i--;  // go back to be sure to not miss anything
+        }
+        if (i == ps.size() - 3 && ps[i] == '/' && ps[i + 1] == '.' && ps[i + 2] == '.') {
+            int pos = ps.rfind("/", i - 1);
+            ps.erase(pos, i - pos + 3);
+        }
+    }
+    return fs::path(ps);
 }
