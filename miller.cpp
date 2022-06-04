@@ -124,8 +124,8 @@ Miller::Miller(unsigned int scrolloff, fs::path start_path) {
     setWindow(bottomRight(), maxx / 2, 1, 0, 0, maxx / 2, maxy - 1, maxx / 2, 1);
     // clang-format on
 
-    left()->setLine(0);
-    middle()->setLine(0);
+    left()->setLine(path()->find(path()->parent(), path()->path()));
+    //middle()->setLine(0);
     // Set scrolloff accordig to the size of the window
     setWantedScrolloff(scrolloff);
     if (((unsigned)maxy - 1) / 2 > wantedScrolloff())
@@ -134,6 +134,9 @@ Miller::Miller(unsigned int scrolloff, fs::path start_path) {
         setScrolloff((maxy - 1) / 2);
 
     draw();
+
+    path()->updateCache(left()->line(), middle()->line(), right()->line(),
+                        path()->current()->getFileByLine(middle()->line())->path.string());
 
     log->debug(left(), "Init left");
     log->debug(middle(), " Init middle");
@@ -449,6 +452,7 @@ void Miller::moveUpCursor() {
     wmove(middle()->win, middle()->line(), 0);
 
     path()->previewChild(right());
+    path()->restoreCache();
 
     middle()->attr_line(SELECTED);  // add highlighting on 'new' line
 
@@ -468,6 +472,7 @@ void Miller::moveDownCursor() {
     wmove(middle()->win, middle()->line(), 0);
 
     path()->previewChild(right());
+    path()->restoreCache();
 
     middle()->attr_line(SELECTED);  // add highlighting on 'new' line
 
@@ -485,10 +490,12 @@ void Miller::moveUpDir() {
     if (path()->path().string() == "/") {
         return;
     }
-    path()->current()->getFileByLine(0);
-
-    middle()->setLine(path()->find(path()->parent(), path()->path()));
+    path()->current()->getFileByLine(0); // TODO useless wtf ?
+    
     path()->goUp();
+
+    //middle()->setLine(path()->find(path()->parent(), path()->path()));
+    path()->restoreCache();
 
     // resize the pad
     setWindow(left(), path()->parent() == nullptr ? 1 : path()->parent()->numOfEntries(), 0, 0);
@@ -507,7 +514,7 @@ void Miller::moveDownDir() {
     };
 
     Entry *currentEntry = path()->current()->getFileByLine(middle()->line());
-    // can enter if dir but not in the first entry is virtual and "not accessible"
+    // can enter if dir but not if the first entry is virtual and "not accessible"
     if (fs::is_directory(currentEntry->path)
         && !((*path()->child()->entries.begin())->isVirtual
              && (*path()->child()->entries.begin())->path.string() == "not accessible")) {
@@ -515,7 +522,8 @@ void Miller::moveDownDir() {
 
         path()->goDown();
 
-        middle()->setLine(0);
+        //middle()->setLine(0);
+        path()->restoreCache();
 
         path()->previewChild(right());
 

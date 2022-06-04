@@ -10,7 +10,6 @@
 
 #include "libft-detect.hpp"
 
-
 /**
  * Populate the content of a directory
  *
@@ -19,7 +18,7 @@
  */
 static void populateContent(Content *content, const fs::path &path) {
     if (fs::is_empty(path)) {
-        content->addVirtual("empty");
+        content->makeVirtual("empty");
         return;
     }
     for (auto &p : fs::directory_iterator(path)) {
@@ -28,6 +27,7 @@ static void populateContent(Content *content, const fs::path &path) {
         entry->filetype = ft_finder->getFiletype(p.path());
         content->entries.emplace(entry);
     }
+    content->setSavedLine(0);
 }
 
 Entry::~Entry() {
@@ -40,6 +40,11 @@ void Content::addVirtual(std::string text) {
     entry->isVirtual = true;
     entry->path      = text;
     entries.emplace(entry);
+}
+
+void Content::makeVirtual(std::string text) {
+    addVirtual(text);
+    setSavedLine(0);
 }
 
 /**
@@ -64,7 +69,7 @@ Entry *Content::getFileByLine(unsigned int line) {
  * @param s: set to query
  * @param n: number of the element
  */
-Entry *Content::getNthElement(std::set<Entry *, decltype(contentSort)> &s, unsigned int n) {
+Entry *Content::getNthElement(std::set<Entry *, decltype(entrySort)> &s, unsigned int n) {
     typename std::set<Entry *>::iterator it = s.begin();
     for (unsigned i = 0; i < n; i++)
         it++;
@@ -86,37 +91,67 @@ Path::Path(fs::path start_path) {
     setCurrent(new Content);
     setChild(new Content);
 
-    populateContent(current(), path());
-    if (fs::is_directory(current()->getFileByLine(0)->path))
-        populateContent(child(), current()->getFileByLine(0)->path);
+    loadContent(currentp(), path());
+    if (fs::is_directory(current()->getFileByLine(0)->path)) {
+        if (loadContent(childp(), current()->getFileByLine(0)->path) == -1)
+            child()->makeVirtual("not accessible");
+    }
 
     if (path().string() != "/") {
         setParent(new Content);
-        populateContent(parent(), path().parent_path());
+        loadContent(parentp(), path().parent_path());
     } else
         setParent(nullptr);
 }
 
 Path::~Path() {
-    if (parent() != nullptr)
-        delete parent();
-    delete current();
-    delete child();
+    for (auto &c : contentCache) {
+        delete c.second;  // delete all the contents
+    }
+}
+
+/**
+ * Load the content of a directory, whether it had been cached or not
+ *
+ * @param content: content to populate
+ * @param path: path tracked by the content
+ *
+ * @return  -1 : filesystem error, probably trying to access non accessible dir
+ *          0 : loaded from cache
+ *          1 : populated because not found in cache
+ */
+int Path::loadContent(Content **content, const fs::path &path) {
+    log->trace(contentCache);
+    if (contentCache.contains(path.string())) {
+        *content = contentCache[path.string()];
+        // log->trace("Loading from cache", path.string());
+        return 1;
+    } else {
+        try {
+            populateContent(*content, path);
+            // log->trace("Populating", path.string());
+        } catch (const fs::filesystem_error &e) {
+            log->debug(e.what());
+            return -1;
+        }
+        return 0;
+    }
 }
 
 /**
  * Go up a directory
  */
 bool Path::goUp() {
+    updateCache(miller->left()->line(), miller->middle()->line(), miller->right()->line(),
+                current()->getFileByLine(miller->middle()->line())->path.string());
     setPath(path().parent_path());
-
-    delete child();
 
     setChild(current());
     setCurrent(parent());
     if (path().string() != "/") {
         setParent(new Content);
-        populateContent(parent(), path().parent_path());
+        if (loadContent(parentp(), path().parent_path()) == 1)
+            parent()->setSavedLine(find(parent(), path()));
         return true;
     } else {
         setParent(nullptr);
@@ -128,6 +163,8 @@ bool Path::goUp() {
  * Go down a directory
  */
 void Path::goDown() {
+    updateCache(miller->left()->line(), miller->middle()->line(), miller->right()->line(),
+                current()->getFileByLine(miller->middle()->line())->path.string());
     setPath(current()->getFileByLine(miller->middle()->line())->path);
 
     Content *tmp = parent();
@@ -135,15 +172,8 @@ void Path::goDown() {
     setParent(current());
     setCurrent(child());
     setChild(new Content);
-    try {
-        // This line is dangerous because the function need access to the content of a
-        // directory we are not sure exists or is readable
-        populateContent(child(), path());
-        delete tmp;
-    } catch (const fs::filesystem_error &e) {
-        log->debug(e.what());
+    if (loadContent(childp(), path()) == -1) {
         setPath(path().parent_path());
-        delete child();
         setChild(current());
         setCurrent(parent());
         setParent(tmp);
@@ -156,7 +186,7 @@ void Path::goDown() {
  * @param win: window in which to preview
  */
 void Path::previewChild(Window *win) {
-    delete child();
+    // delete child();
     setChild(new Content);
     auto setWindow = [](Window *win, int sizey, int startx, int starty) {
         win->sizey  = sizey;
@@ -165,17 +195,18 @@ void Path::previewChild(Window *win) {
         wresize(win->win, win->sizey > win->vsizey ? win->sizey : win->vsizey + 1,
                 win->sizex > win->vsizex ? win->sizex : win->vsizex);
     };
-    try {
-        if (fs::is_directory(current()->getFileByLine(miller->middle()->line())->path)) {
-            populateContent(child(), current()->getFileByLine(miller->middle()->line())->path);
-        }
-    } catch (const fs::filesystem_error &e) {
-        child()->addVirtual("not accessible");
-        log->debug(e.what());
+    if (fs::is_directory(current()->getFileByLine(miller->middle()->line())->path)) {
+        if (loadContent(childp(), current()->getFileByLine(miller->middle()->line())->path) == -1)
+            child()->makeVirtual("not accessible");
     }
+    log->trace(miller->left()->line(), "left");
+    log->trace(miller->middle()->line(), "middle");
+    log->trace(miller->right()->line(), "right");
+    updateCache(miller->left()->line(), miller->middle()->line(), child()->getSavedLine(),
+                current()->getFileByLine(miller->middle()->line())->path.string());
     setWindow(win, child()->numOfEntries(), 0, 0);  // why did i write this
-    // setWindow(win, win->sizey, 0, 0); // prob because this is usually too long so lag
-
+    // setWindow(win, win->sizey, 0, 0); // prob because this is usually too long so
+    // lag
     werase(win->win);
     win->display(child());
     pnoutrefresh(win->win, win->starty, win->startx, win->posy, win->posx,
@@ -189,12 +220,47 @@ int Path::find(Content *content, fs::path p) {
 }
 
 /**
+ * Saves the state of all the active content to be able to restore them
+ */
+void Path::updateCache(int parentLine, int currentLine, int childLine, std::string childPath) {
+    if (parent() != nullptr) {
+        if (!contentCache.contains(path().parent_path().string())) {
+            contentCache[path().parent_path().string()] = parent();
+        }
+        contentCache[path().parent_path().string()]->setSavedLine(parentLine);
+    }
+
+    if (!contentCache.contains(path().string())) {
+        contentCache[path().string()] = current();
+    }
+    contentCache[path().string()]->setSavedLine(currentLine);
+    log->trace(path().string());
+    log->trace(currentLine, "saving");
+
+    if (!contentCache.contains(childPath)) {
+        contentCache[childPath] = child();
+    }
+    contentCache[childPath]->setSavedLine(childLine);
+}
+
+/**
+ * Restore the datas from the cache
+ */
+void Path::restoreCache() {
+    // log->trace(contentCache["/"]->getSavedLine(), "saved /");
+    if (parent() != nullptr)
+        miller->left()->setLine(parent()->getSavedLine());
+    miller->middle()->setLine(current()->getSavedLine());
+    miller->right()->setLine(child()->getSavedLine());
+}
+
+/**
  * Get the index of an element
  *
  * @param s: set to query
  * @param p: element to find
  */
-int Path::getIndex(std::set<Entry *, decltype(contentSort)> &s, fs::path p) {
+int Path::getIndex(std::set<Entry *, decltype(entrySort)> &s, fs::path p) {
     int c = 0;
     for (auto &e : s) {
         if (e->path == p)
@@ -219,12 +285,16 @@ fs::path path::simplify(const fs::path &p) {
             ps.erase(i, 2);
         if (i < ps.size() - 3 && ps[i] == '/' && ps[i + 1] == '.' && ps[i + 2] == '.'
             && ps[i + 3] == '/') {
-            int pos = ps.rfind("/", i - 1);
+            auto pos = ps.rfind("/", i - 1);
+            if (pos == std::string::npos)
+                pos = 0;
             ps.erase(pos, i - pos + 3);
             i--;  // go back to be sure to not miss anything
         }
         if (i == ps.size() - 3 && ps[i] == '/' && ps[i + 1] == '.' && ps[i + 2] == '.') {
-            int pos = ps.rfind("/", i - 1);
+            auto pos = ps.rfind("/", i - 1);
+            if (pos == std::string::npos)
+                pos = 0;
             ps.erase(pos, i - pos + 3);
         }
     }

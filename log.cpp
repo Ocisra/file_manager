@@ -28,3 +28,16 @@ void Logger::log(std::string &msg, unsigned int &depth) {
     log_file << msg << std::endl;
     log_file.close();
 }
+
+/// Log the cache
+void Logger::log(std::map<std::string, Content*> cache) {
+    std::ofstream log_file;
+    log_file.open(log_file_path, std::ios::app);
+    log_file << "Cache :" << std::endl;
+    for (auto& e : cache) {
+        log_file << e.first << "\t" << e.second->numOfEntries() << " entries, line " << e.second->getSavedLine() << std::endl;
+        
+    }
+    log_file.close();
+}
+

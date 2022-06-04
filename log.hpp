@@ -29,10 +29,12 @@
 #define LOG_HPP
 
 /// Include custom headers here
+#include <map>
 /// End of custom headers
 
 /// Forward declare here
 class Window;
+class Content;
 /// End of forward declaration
 
 #include <fstream>
@@ -61,6 +63,7 @@ class Logger {
     }
     void log(Window *win, const std::string &title = "");
     void log(std::string &msg, unsigned int &depth);
+    void log(std::map<std::string, Content*> cache);
     /**
      * End of custom overloads
      */

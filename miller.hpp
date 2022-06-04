@@ -73,7 +73,7 @@ class Window {
     unsigned int vsizex, vsizey;  // size of the visible region of the pad
 
     private:
-    unsigned int cursorLine;
+    unsigned int cursorLine = 0;
 };
 
 
