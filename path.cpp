@@ -34,6 +34,9 @@ Entry::~Entry() {
     delete filetype;
 }
 
+/**
+ * Adds a virtual Entry to a Content with the given text
+ */
 void Content::addVirtual(std::string text) {
     Entry *entry     = new Entry;
     entry->filetype  = nullptr;
@@ -42,7 +45,14 @@ void Content::addVirtual(std::string text) {
     entries.emplace(entry);
 }
 
+/**
+ * Clean a Content and make it have only one virtual Entry
+ */
 void Content::makeVirtual(std::string text) {
+    for(auto& e : entries) {
+        delete e;
+    }
+    entries.clear();
     addVirtual(text);
     setSavedLine(0);
 }
@@ -83,6 +93,7 @@ Content::~Content() {
 }
 
 Path::Path(fs::path start_path) {
+    // TODO move to simplify()
     if (start_path.string().ends_with('/') && start_path.string() != "/")
         setPath(start_path.parent_path());
     else
@@ -91,22 +102,27 @@ Path::Path(fs::path start_path) {
     setCurrent(new Content);
     setChild(new Content);
 
-    loadContent(currentp(), path());
+    loadContent(current(), path());
     if (fs::is_directory(current()->getFileByLine(0)->path)) {
-        if (loadContent(childp(), current()->getFileByLine(0)->path) == -1)
+        if (loadContent(child(), current()->getFileByLine(0)->path) == -1)
             child()->makeVirtual("not accessible");
     }
 
     if (path().string() != "/") {
         setParent(new Content);
-        loadContent(parentp(), path().parent_path());
+        loadContent(parent(), path().parent_path());
+        parent()->setSavedLine(find(parent(), path()));
     } else
         setParent(nullptr);
 }
 
 Path::~Path() {
+    log->trace(contentCache);
     for (auto &c : contentCache) {
-        delete c.second;  // delete all the contents
+        if (c.first != "/home")
+            delete c.second;  // delete all the contents
+        else
+            log->trace(c.second);
     }
 }
 
@@ -120,21 +136,21 @@ Path::~Path() {
  *          0 : loaded from cache
  *          1 : populated because not found in cache
  */
-int Path::loadContent(Content **content, const fs::path &path) {
+int Path::loadContent(Content *&content, fs::path path) {
     log->trace(contentCache);
     if (contentCache.contains(path.string())) {
-        *content = contentCache[path.string()];
-        // log->trace("Loading from cache", path.string());
-        return 1;
+        content = contentCache[path.string()];
+         log->trace("Loading from cache", path.string());
+        return 0;
     } else {
         try {
-            populateContent(*content, path);
-            // log->trace("Populating", path.string());
+            populateContent(content, path);
+             log->trace("Populating", path.string());
         } catch (const fs::filesystem_error &e) {
             log->debug(e.what());
             return -1;
         }
-        return 0;
+        return 1;
     }
 }
 
@@ -150,7 +166,7 @@ bool Path::goUp() {
     setCurrent(parent());
     if (path().string() != "/") {
         setParent(new Content);
-        if (loadContent(parentp(), path().parent_path()) == 1)
+        if (loadContent(parent(), path().parent_path()) == 1)
             parent()->setSavedLine(find(parent(), path()));
         return true;
     } else {
@@ -165,6 +181,7 @@ bool Path::goUp() {
 void Path::goDown() {
     updateCache(miller->left()->line(), miller->middle()->line(), miller->right()->line(),
                 current()->getFileByLine(miller->middle()->line())->path.string());
+
     setPath(current()->getFileByLine(miller->middle()->line())->path);
 
     Content *tmp = parent();
@@ -172,7 +189,7 @@ void Path::goDown() {
     setParent(current());
     setCurrent(child());
     setChild(new Content);
-    if (loadContent(childp(), path()) == -1) {
+    if (loadContent(child(), path()) == -1) {
         setPath(path().parent_path());
         setChild(current());
         setCurrent(parent());
@@ -196,7 +213,7 @@ void Path::previewChild(Window *win) {
                 win->sizex > win->vsizex ? win->sizex : win->vsizex);
     };
     if (fs::is_directory(current()->getFileByLine(miller->middle()->line())->path)) {
-        if (loadContent(childp(), current()->getFileByLine(miller->middle()->line())->path) == -1)
+        if (loadContent(child(), current()->getFileByLine(miller->middle()->line())->path) == -1)
             child()->makeVirtual("not accessible");
     }
     log->trace(miller->left()->line(), "left");
@@ -222,7 +239,7 @@ int Path::find(Content *content, fs::path p) {
 /**
  * Saves the state of all the active content to be able to restore them
  */
-void Path::updateCache(int parentLine, int currentLine, int childLine, std::string childPath) {
+void Path::updateCache(int parentLine, int currentLine, int childLine, fs::path childPath) {
     if (parent() != nullptr) {
         if (!contentCache.contains(path().parent_path().string())) {
             contentCache[path().parent_path().string()] = parent();
@@ -234,8 +251,6 @@ void Path::updateCache(int parentLine, int currentLine, int childLine, std::stri
         contentCache[path().string()] = current();
     }
     contentCache[path().string()]->setSavedLine(currentLine);
-    log->trace(path().string());
-    log->trace(currentLine, "saving");
 
     if (!contentCache.contains(childPath)) {
         contentCache[childPath] = child();
@@ -260,7 +275,7 @@ void Path::restoreCache() {
  * @param s: set to query
  * @param p: element to find
  */
-int Path::getIndex(std::set<Entry *, decltype(entrySort)> &s, fs::path p) {
+int Path::getIndex(const std::set<Entry *, decltype(entrySort)> &s, fs::path p) {
     int c = 0;
     for (auto &e : s) {
         if (e->path == p)
@@ -274,8 +289,11 @@ int Path::getIndex(std::set<Entry *, decltype(entrySort)> &s, fs::path p) {
  * Removes . and .. in a path and return the trimmed one
  * TODO handle path like '/../some/path'
  */
-fs::path path::simplify(const fs::path &p) {
+fs::path path::simplify(fs::path p) {
     std::string ps = p.string();
+    if (ps.ends_with("/")) {
+        ps.pop_back();
+    }
     for (unsigned long i = 0; i < ps.size(); i++) {
         if (i < ps.size() - 2 && ps[i] == '/' && ps[i + 1] == '.' && ps[i + 2] == '/') {
             ps.erase(i, 2);

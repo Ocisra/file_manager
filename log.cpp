@@ -41,3 +41,24 @@ void Logger::log(std::map<std::string, Content*> cache) {
     log_file.close();
 }
 
+void Logger::log(Content* content) {
+    std::ofstream log_file;
+    log_file.open(log_file_path, std::ios::app);
+    log_file << "Content :\n\t" << content->numOfEntries() << " entries\n\tline " 
+        << content->getSavedLine() << std::endl;
+    for(auto& e : content->entries)
+        log(e);
+    log_file.close();
+}
+
+void Logger::log(Entry* entry) {
+    std::ofstream log_file;
+    log_file.open(log_file_path, std::ios::app);
+    log_file << entry->path.string() << " ";
+    if (entry->isDisplayed)
+        log_file << "displayed ";
+    if (entry->isVirtual)
+        log_file << "virtual ";
+    log_file << std::endl;
+    log_file.close();
+}

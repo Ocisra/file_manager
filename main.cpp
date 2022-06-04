@@ -116,32 +116,28 @@ int main(int argc, char *argv[]) {
         c = getch();
 
 
-        switch (c) {
-        case KEY_RESIZE: miller->resizeTerm(); break;
-        /*case 'k': miller->moveUpCursor(); break;
-        case 'j': miller->moveDownCursor(); break;
-        case 'h': miller->moveUpDir(); break;
-        case 'l': miller->moveDownDir(); break;
-        default:;*/
-        default: {
-            keyStreak += c;
-            MappingSet possibleMappings;
-            int startingChar = Mappings::extract(&keyStreak, config->mappings, &possibleMappings);
-            if (startingChar == -1) {
-                keyStreak.clear();
-                continue;
-            }
-            keyStreak.erase(0, startingChar);  // we don't need the beginning, it doesn't
-                                               // correspond to a mapping
-            if (possibleMappings.size() > 1) {
-                continue;
-            }
-            if (possibleMappings.begin()->key_sequence == keyStreak) {
-                possibleMappings.begin()->action(miller);
-                keyStreak.clear();
-            }
+        if (c == KEY_RESIZE) {
+            miller->resizeTerm();
+            continue;
         }
+
+        keyStreak += c;
+        MappingSet possibleMappings;
+        int startingChar = Mappings::extract(&keyStreak, config->mappings, &possibleMappings);
+        if (startingChar == -1) {
+            keyStreak.clear();
+            continue;
         }
-        doupdate();
+        keyStreak.erase(0, startingChar);  // we don't need the beginning, it doesn't
+                                           // correspond to a mapping
+        if (possibleMappings.size() > 1) {
+            continue;
+        }
+        if (possibleMappings.begin()->key_sequence == keyStreak) {
+            possibleMappings.begin()->action(miller);
+            keyStreak.clear();
+        }
+
+        doupdate();  // draw the changes
     }
 }

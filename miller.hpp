@@ -78,7 +78,7 @@ class Window {
 
 
 /**
- * The class representing the whole Miller columns interface
+ * The class representing the Miller columns interface (UI)
  */
 class Miller {
     public:

@@ -35,6 +35,7 @@
 /// Forward declare here
 class Window;
 class Content;
+struct Entry;
 /// End of forward declaration
 
 #include <fstream>
@@ -64,6 +65,8 @@ class Logger {
     void log(Window *win, const std::string &title = "");
     void log(std::string &msg, unsigned int &depth);
     void log(std::map<std::string, Content*> cache);
+    void log(Content* content);
+    void log(Entry* entry);
     /**
      * End of custom overloads
      */

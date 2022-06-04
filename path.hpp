@@ -111,21 +111,21 @@ class Path {
     int find(Content *content, fs::path p);
 
     inline fs::path path() { return currentPath; }
-    inline void setPath(fs::path p) { currentPath = p; }
+    inline void setPath(const fs::path p) { currentPath = p; }
 
     /// Get the corresponding content
-    inline Content *parent() { return parentContent; }
-    inline Content *current() { return currentContent; }
-    inline Content *child() { return childContent; }
+    inline Content *&parent() { return parentContent; }
+    inline Content *&current() { return currentContent; }
+    inline Content *&child() { return childContent; }
     /// Get the corresponding content with an aditionnal pointer
-    inline Content **parentp() { return &parentContent; }
-    inline Content **currentp() { return &currentContent; }
-    inline Content **childp() { return &childContent; }
+    //inline Content **parentp() { return &parentContent; }
+    //inline Content **currentp() { return &currentContent; }
+    //inline Content **childp() { return &childContent; }
     /// Set the corresponding content
     inline void setParent(Content *c) { parentContent = c; }
     inline void setCurrent(Content *c) { currentContent = c; }
     inline void setChild(Content *c) { childContent = c; }
-    void updateCache(int parentLine, int currentLine, int childLine, std::string childPath);
+    void updateCache(int parentLine, int currentLine, int childLine, fs::path childPath);
     void restoreCache();
 
 
@@ -133,13 +133,13 @@ class Path {
     Content *parentContent, *currentContent, *childContent;
     fs::path currentPath;
     std::map<std::string, Content *> contentCache;
-    int loadContent(Content **content, const fs::path &path);
-    int getIndex(std::set<Entry *, decltype(entrySort)> &s, fs::path p);
+    int loadContent(Content *&content, fs::path path);
+    int getIndex(const std::set<Entry *, decltype(entrySort)> &s, fs::path p);
 };
 
 
 namespace path {
-fs::path simplify(const fs::path &p);
+fs::path simplify(fs::path p);
 }
 
 #endif  // PATH_HPP

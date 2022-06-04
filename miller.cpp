@@ -124,9 +124,9 @@ Miller::Miller(unsigned int scrolloff, fs::path start_path) {
     setWindow(bottomRight(), maxx / 2, 1, 0, 0, maxx / 2, maxy - 1, maxx / 2, 1);
     // clang-format on
 
-    left()->setLine(path()->find(path()->parent(), path()->path()));
-    //middle()->setLine(0);
-    // Set scrolloff accordig to the size of the window
+    // left()->setLine(path()->find(path()->parent(), path()->path()));
+    // middle()->setLine(0);
+    //  Set scrolloff accordig to the size of the window
     setWantedScrolloff(scrolloff);
     if (((unsigned)maxy - 1) / 2 > wantedScrolloff())
         setScrolloff(wantedScrolloff());
@@ -135,8 +135,8 @@ Miller::Miller(unsigned int scrolloff, fs::path start_path) {
 
     draw();
 
-    path()->updateCache(left()->line(), middle()->line(), right()->line(),
-                        path()->current()->getFileByLine(middle()->line())->path.string());
+    if (path()->parent() != nullptr)
+        left()->setLine(path()->parent()->getSavedLine());
 
     log->debug(left(), "Init left");
     log->debug(middle(), " Init middle");
@@ -490,11 +490,11 @@ void Miller::moveUpDir() {
     if (path()->path().string() == "/") {
         return;
     }
-    path()->current()->getFileByLine(0); // TODO useless wtf ?
-    
+    path()->current()->getFileByLine(0);  // TODO useless wtf ?
+
     path()->goUp();
 
-    //middle()->setLine(path()->find(path()->parent(), path()->path()));
+    // middle()->setLine(path()->find(path()->parent(), path()->path()));
     path()->restoreCache();
 
     // resize the pad
@@ -522,7 +522,7 @@ void Miller::moveDownDir() {
 
         path()->goDown();
 
-        //middle()->setLine(0);
+        // middle()->setLine(0);
         path()->restoreCache();
 
         path()->previewChild(right());
