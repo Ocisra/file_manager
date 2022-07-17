@@ -49,7 +49,7 @@ void Content::addVirtual(std::string text) {
  * Clean a Content and make it have only one virtual Entry
  */
 void Content::makeVirtual(std::string text) {
-    for(auto& e : entries) {
+    for (auto &e : entries) {
         delete e;
     }
     entries.clear();
@@ -137,20 +137,24 @@ Path::~Path() {
  *          1 : populated because not found in cache
  */
 int Path::loadContent(Content *&content, fs::path path) {
-    log->trace(contentCache);
     if (contentCache.contains(path.string())) {
         content = contentCache[path.string()];
-         log->trace("Loading from cache", path.string());
+        log->trace("Loading from cache", path.string());
         return 0;
     } else {
-        try {
-            populateContent(content, path);
-             log->trace("Populating", path.string());
-        } catch (const fs::filesystem_error &e) {
-            log->debug(e.what());
-            return -1;
+        if (fs::is_directory(path)) {
+            try {
+                populateContent(content, path);
+                log->trace("Populating", path.string());
+            } catch (const fs::filesystem_error &e) {
+                log->debug(e.what());
+                return -1;
+            }
+            return 1;
+        } else {
+            content->makeVirtual("regular file");
+            return 1;
         }
-        return 1;
     }
 }
 
@@ -160,6 +164,7 @@ int Path::loadContent(Content *&content, fs::path path) {
 bool Path::goUp() {
     updateCache(miller->left()->line(), miller->middle()->line(), miller->right()->line(),
                 current()->getFileByLine(miller->middle()->line())->path.string());
+
     setPath(path().parent_path());
 
     setChild(current());
@@ -189,7 +194,7 @@ void Path::goDown() {
     setParent(current());
     setCurrent(child());
     setChild(new Content);
-    if (loadContent(child(), path()) == -1) {
+    if (loadContent(child(), current()->getFileByLine(current()->getSavedLine())->path) == -1) {
         setPath(path().parent_path());
         setChild(current());
         setCurrent(parent());
@@ -212,13 +217,8 @@ void Path::previewChild(Window *win) {
         wresize(win->win, win->sizey > win->vsizey ? win->sizey : win->vsizey + 1,
                 win->sizex > win->vsizex ? win->sizex : win->vsizex);
     };
-    if (fs::is_directory(current()->getFileByLine(miller->middle()->line())->path)) {
-        if (loadContent(child(), current()->getFileByLine(miller->middle()->line())->path) == -1)
-            child()->makeVirtual("not accessible");
-    }
-    log->trace(miller->left()->line(), "left");
-    log->trace(miller->middle()->line(), "middle");
-    log->trace(miller->right()->line(), "right");
+    if (loadContent(child(), current()->getFileByLine(miller->middle()->line())->path) == -1)
+        child()->makeVirtual("not accessible");
     updateCache(miller->left()->line(), miller->middle()->line(), child()->getSavedLine(),
                 current()->getFileByLine(miller->middle()->line())->path.string());
     setWindow(win, child()->numOfEntries(), 0, 0);  // why did i write this
@@ -262,7 +262,6 @@ void Path::updateCache(int parentLine, int currentLine, int childLine, fs::path 
  * Restore the datas from the cache
  */
 void Path::restoreCache() {
-    // log->trace(contentCache["/"]->getSavedLine(), "saved /");
     if (parent() != nullptr)
         miller->left()->setLine(parent()->getSavedLine());
     miller->middle()->setLine(current()->getSavedLine());

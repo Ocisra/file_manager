@@ -16,6 +16,8 @@ static void open2(fs::path path, std::vector<std::string> openers) {
     for (auto &o : openers) {
         system((o + " " + path.string()).c_str());
     }
+    clear();
+    miller->draw();
 }
 
 void movement::open(Entry *entry) {
@@ -46,7 +48,9 @@ void movement::moveRight(Miller *miller) {
 /**
  * Clean exit
  */
-void movement::quit(Miller*) {
+void movement::quit(Miller *) {
+    clear();    // clear the screen
+    refresh();  //
     delete miller;
     endwin();
     log->info("Quitting");

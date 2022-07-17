@@ -95,7 +95,7 @@ Miller::Miller(unsigned int scrolloff, fs::path start_path) {
     auto setWindow = [](Window *win, int sizex, int sizey, int startx, int starty,
                         int posx, int posy, int vsizex, int vsizey) {
         win->win = newpad(sizey, sizex);
-        wbkgd(win->win, COLOR_PAIR(REGULAR));
+        //wbkgd(win->win, COLOR_PAIR(REGULAR));
         win->sizex  = sizex;
         win->sizey  = sizey;
         win->startx = startx;
@@ -133,10 +133,10 @@ Miller::Miller(unsigned int scrolloff, fs::path start_path) {
     else
         setScrolloff((maxy - 1) / 2);
 
-    draw();
-
     if (path()->parent() != nullptr)
         left()->setLine(path()->parent()->getSavedLine());
+
+    draw();
 
     log->debug(left(), "Init left");
     log->debug(middle(), " Init middle");
@@ -235,7 +235,11 @@ void Miller::updateFileStatus() {
 
     struct stat sb;
     if (stat(file.c_str(), &sb) == -1) {
-        log->warning("stat() returned -1 when updating the file status");
+        // probably in an empty dir
+        log->info("stat() returned -1 when updating the file status");
+        // TODO : error when in empty dir, below should work but does not
+        //wclear(bottomLeft()->win);
+        //wrefresh(bottomLeft()->win);
         return;
     }
 
@@ -293,7 +297,7 @@ void Miller::updateDirStatus() {
 
     struct stat sb;
     if (stat(dir.c_str(), &sb) == -1) {
-        log->warning("stat() returned -1 when updating the file status");
+        log->warning("stat() returned -1 when updating the dir status");
         return;
     }
 
@@ -365,11 +369,15 @@ void Miller::draw() {
                  bottomRight()->vsizex + bottomRight()->posx);
     updateFileStatus();
     updateDirStatus();
-    // doupdate();
 
+    wmove(left()->win, left()->line(), 0);
     wmove(middle()->win, middle()->line(), 0);
+    wmove(right()->win, right()->line(), 0);
+    if (!(*path()->child()->entries.begin())->isVirtual)
+        right()->attr_line(SELECTED);
     if (!(*path()->current()->entries.begin())->isVirtual)
         middle()->attr_line(SELECTED);
+    left()->attr_line(SELECTED);
 }
 
 /**
@@ -454,7 +462,11 @@ void Miller::moveUpCursor() {
     path()->previewChild(right());
     path()->restoreCache();
 
+    left()->attr_line(SELECTED);
     middle()->attr_line(SELECTED);  // add highlighting on 'new' line
+    wmove(right()->win, right()->line(), 0);
+    if (!(*path()->child()->entries.begin())->isVirtual)
+        right()->attr_line(SELECTED);
 
     updateFileStatus();
 }
@@ -474,7 +486,12 @@ void Miller::moveDownCursor() {
     path()->previewChild(right());
     path()->restoreCache();
 
+    left()->attr_line(SELECTED);
     middle()->attr_line(SELECTED);  // add highlighting on 'new' line
+    wmove(right()->win, right()->line(), 0);
+
+    if (!(*path()->child()->entries.begin())->isVirtual)
+        right()->attr_line(SELECTED);
 
     updateFileStatus();
 }
